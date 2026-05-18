@@ -3,7 +3,7 @@ function kronos --description "Active Directory attack orchestrator"
     set -l action $argv[1]
     
     if test -z "$action"
-        _kronos_help
+        __kronos_help
         return 1
     end
     
@@ -14,121 +14,53 @@ function kronos --description "Active Directory attack orchestrator"
             if set -q argv[1]
                 set -l subaction $argv[1]
                 switch "$subaction"
-                    case userenum
-                        _kronos_userenum --help
-                    case dominfo
-                        _kronos_dominfo --help
-                    case ingest
-                        _kronos_ingest --help
-                    case connect
-                        _kronos_connect --help
-                    case asrep-roast
-                        _kronos_asrep_roast --help
-                    case kerbroast
-                        _kronos_kerbroast --help
-                    case spray
-                        _kronos_spray --help
-                    case forcechange
-                        _kronos_forcechange --help
-                    case gmsa
-                        _kronos_gmsa --help
-                    case ticket
-                        _kronos_ticket --help
-                    case convert
-                        _kronos_convert --help
-                    case request
-                        _kronos_request --help
-                    case lookupsid
-                        _kronos_lookupsid --help
+                    case userenum; __kronos_userenum --help
+                    case dominfo;  __kronos_dominfo --help
+                    case ingest;   __kronos_ingest --help
+                    case rdp;      __kronos_rdp --help
+                    case winrm;    __kronos_winrm --help
+                    case ftp;      __kronos_ftp --help
+                    case smb;      __kronos_smb --help
+                    case rpc;      __kronos_rpc --help
+                    case asrep-roast; __kronos_asrep_roast --help
+                    case kerbroast;   __kronos_kerbroast --help
+                    case spray;       __kronos_spray --help
+                    case forcechange; __kronos_forcechange --help
+                    case gmsa;        __kronos_gmsa --help
+                    case ticket;      __kronos_ticket --help
+                    case convert;     __kronos_convert --help
+                    case request;     __kronos_request --help
+                    case lookupsid;   __kronos_lookupsid --help
+                    case install;     __kronos_install --help
                     case '*'
-                        echo "Error: Unknown command '$subaction'" >&2
-                        _kronos_help
+                        echo "error: unknown command '$subaction'" >&2
+                        __kronos_help
                         return 1
                 end
             else
-                _kronos_help
+                __kronos_help
             end
-        case userenum
-            if test "$argv[1]" = "help"
-                _kronos_userenum --help
-            else
-                _kronos_userenum $argv
-            end
-        case dominfo
-            if test "$argv[1]" = "help"
-                _kronos_dominfo --help
-            else
-                _kronos_dominfo $argv
-            end
-        case ingest
-            if test "$argv[1]" = "help"
-                _kronos_ingest --help
-            else
-                _kronos_ingest $argv
-            end
-        case connect
-            if test "$argv[1]" = "help"
-                _kronos_connect --help
-            else
-                _kronos_connect $argv
-            end
-        case asrep-roast
-            if test "$argv[1]" = "help"
-                _kronos_asrep_roast --help
-            else
-                _kronos_asrep_roast $argv
-            end
-        case kerbroast
-            if test "$argv[1]" = "help"
-                _kronos_kerbroast --help
-            else
-                _kronos_kerbroast $argv
-            end
-        case spray
-            if test "$argv[1]" = "help"
-                _kronos_spray --help
-            else
-                _kronos_spray $argv
-            end
-        case forcechange
-            if test "$argv[1]" = "help"
-                _kronos_forcechange --help
-            else
-                _kronos_forcechange $argv
-            end
-        case gmsa
-            if test "$argv[1]" = "help"
-                _kronos_gmsa --help
-            else
-                _kronos_gmsa $argv
-            end
-        case ticket
-            if test "$argv[1]" = "help"
-                _kronos_ticket --help
-            else
-                _kronos_ticket $argv
-            end
-        case convert
-            if test "$argv[1]" = "help"
-                _kronos_convert --help
-            else
-                _kronos_convert $argv
-            end
-        case request
-            if test "$argv[1]" = "help"
-                _kronos_request --help
-            else
-                _kronos_request $argv
-            end
-        case lookupsid
-            if test "$argv[1]" = "help"
-                _kronos_lookupsid --help
-            else
-                _kronos_lookupsid $argv
-            end
+        case userenum;    __kronos_userenum $argv
+        case dominfo;     __kronos_dominfo $argv
+        case ingest;      __kronos_ingest $argv
+        case rdp;         __kronos_rdp $argv
+        case winrm;       __kronos_winrm $argv
+        case ftp;         __kronos_ftp $argv
+        case smb;         __kronos_smb $argv
+        case rpc;         __kronos_rpc $argv
+        case asrep-roast; __kronos_asrep_roast $argv
+        case kerbroast;   __kronos_kerbroast $argv
+        case spray;       __kronos_spray $argv
+        case forcechange; __kronos_forcechange $argv
+        case gmsa;        __kronos_gmsa $argv
+        case ticket;      __kronos_ticket $argv
+        case convert;     __kronos_convert $argv
+        case request;     __kronos_request $argv
+        case lookupsid;   __kronos_lookupsid $argv
+        case install;     __kronos_install $argv
         case '*'
-            echo "Error: Unknown command '$action'" >&2
-            _kronos_help
+            echo "error: unknown command '$action'" >&2
+            __kronos_help
             return 1
     end
 end
