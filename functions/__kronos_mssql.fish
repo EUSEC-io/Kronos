@@ -41,9 +41,19 @@ function __kronos_mssql --description "Connect to target using mssqlclient.py (M
         return 1
     end
 
-    set -l mssql_args ""
+    set -l mssql_args
     if set -q _flag_kerberos
-        set -a mssql_args -k -no-pass "$domain/$user@$target"
+        set -a mssql_args -k -no-pass
+        
+        # Kerberos often requires the FQDN in the target string to resolve the SPN.
+        # Use TGT_DC_HOST if available, and provide the IP via -dc-ip.
+        set -l connect_target $target
+        if test -n "$TGT_DC_HOST"
+            set connect_target $TGT_DC_HOST
+            set -a mssql_args -dc-ip "$target"
+        end
+        
+        set -a mssql_args "$domain/$user@$connect_target"
     else if set -q _flag_hash
         set -a mssql_args -hashes "$_flag_hash" "$domain/$user@$target"
     else
