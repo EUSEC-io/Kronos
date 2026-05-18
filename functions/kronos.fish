@@ -20,6 +20,8 @@ function kronos --description "Active Directory attack orchestrator"
                         _kronos_dominfo --help
                     case ingest
                         _kronos_ingest --help
+                    case connect
+                        _kronos_connect --help
                     case '*'
                         echo "Error: Unknown command '$subaction'" >&2
                         _kronos_help
@@ -45,6 +47,12 @@ function kronos --description "Active Directory attack orchestrator"
                 _kronos_ingest --help
             else
                 _kronos_ingest $argv
+            end
+        case connect
+            if test "$argv[1]" = "help"
+                _kronos_connect --help
+            else
+                _kronos_connect $argv
             end
         case '*'
             echo "Error: Unknown command '$action'" >&2

@@ -58,4 +58,16 @@ kronos help
     kronos ingest 10.10.10.10 -u 'admin' -p 'Secret123!' -o 'my-collection.zip'
     ```
 
+*   **`connect`**: Connect to the target using `evil-winrm` (CLI) or `xfreerdp3` (GUI).
+    ```bash
+    # CLI connection (uses evil-winrm with active tgt credentials)
+    kronos connect 10.10.10.10
+
+    # GUI connection (uses xfreerdp3 with active tgt credentials)
+    kronos connect 10.10.10.10 --gui
+    
+    # Overriding credentials and using a hash
+    kronos connect 10.10.10.10 -u 'admin' -H 'aad3b435b51404eeaad3b435b51404ee:5fbc3d5fec8206a30f4b6c473d68ae76'
+    ```
+
 *(Run `kronos <command> --help` for specific options available to each command.)*
