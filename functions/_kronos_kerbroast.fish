@@ -81,12 +81,17 @@ function _kronos_kerbroast --description "Run Kerberoasting using impacket-GetUs
         return 1
     end
 
-    if not command -s impacket-GetUserSPNs >/dev/null
-        echo "Error: impacket-GetUserSPNs not found in PATH." >&2
+    set -l impacket_cmd ""
+    if command -s GetUserSPNs.py >/dev/null
+        set impacket_cmd "GetUserSPNs.py"
+    else if command -s impacket-GetUserSPNs >/dev/null
+        set impacket_cmd "impacket-GetUserSPNs"
+    else
+        echo "Error: GetUserSPNs.py or impacket-GetUserSPNs not found in PATH." >&2
         return 1
     end
 
-    set -l cmd_str "impacket-GetUserSPNs \"$domain/$auth_user"
+    set -l cmd_str "$impacket_cmd \"$domain/$auth_user"
     if set -q _flag_kerberos
         set cmd_str "$cmd_str\" -k"
     else if test -n "$auth_hash"

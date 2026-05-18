@@ -82,12 +82,17 @@ function _kronos_lookupsid --description "Enumerate SIDs for AD objects using im
         return 1
     end
 
-    if not command -s impacket-lookupsid >/dev/null
-        echo "Error: impacket-lookupsid not found in PATH." >&2
+    set -l impacket_cmd ""
+    if command -s lookupsid.py >/dev/null
+        set impacket_cmd "lookupsid.py"
+    else if command -s impacket-lookupsid >/dev/null
+        set impacket_cmd "impacket-lookupsid"
+    else
+        echo "Error: lookupsid.py or impacket-lookupsid not found in PATH." >&2
         return 1
     end
 
-    set -l cmd_str "impacket-lookupsid \"$domain/$auth_user"
+    set -l cmd_str "$impacket_cmd \"$domain/$auth_user"
     if set -q _flag_kerberos
         set cmd_str "$cmd_str\" -k -no-pass"
     else if test -n "$auth_hash"

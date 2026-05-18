@@ -76,13 +76,18 @@ function _kronos_request --description "Request TGT or ST using impacket"
     end
 
     if set -q _flag_spn
-        if not command -s impacket-getST >/dev/null
-            echo "Error: impacket-getST not found in PATH." >&2
+        set -l impacket_cmd ""
+        if command -s getST.py >/dev/null
+            set impacket_cmd "getST.py"
+        else if command -s impacket-getST >/dev/null
+            set impacket_cmd "impacket-getST"
+        else
+            echo "Error: getST.py or impacket-getST not found in PATH." >&2
             return 1
         end
         
         echo "Requesting Service Ticket for $_flag_spn..."
-        set -l cmd_str "impacket-getST -spn $_flag_spn -dc-ip $target"
+        set -l cmd_str "$impacket_cmd -spn $_flag_spn -dc-ip $target"
         
         if test -n "$auth_hash"
             set cmd_str "$cmd_str -hashes $auth_hash $domain/$auth_user"
@@ -98,13 +103,18 @@ function _kronos_request --description "Request TGT or ST using impacket"
             echo "Ticket exported to KRB5CCNAME=$KRB5CCNAME"
         end
     else
-        if not command -s impacket-getTGT >/dev/null
-            echo "Error: impacket-getTGT not found in PATH." >&2
+        set -l impacket_cmd ""
+        if command -s getTGT.py >/dev/null
+            set impacket_cmd "getTGT.py"
+        else if command -s impacket-getTGT >/dev/null
+            set impacket_cmd "impacket-getTGT"
+        else
+            echo "Error: getTGT.py or impacket-getTGT not found in PATH." >&2
             return 1
         end
 
         echo "Requesting Ticket Granting Ticket for $auth_user..."
-        set -l cmd_str "impacket-getTGT -dc-ip $target"
+        set -l cmd_str "$impacket_cmd -dc-ip $target"
         
         if test -n "$auth_hash"
             set cmd_str "$cmd_str -hashes $auth_hash $domain/$auth_user"

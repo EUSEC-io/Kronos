@@ -20,11 +20,16 @@ function _kronos_convert --description "Convert tickets between kirbi and ccache
         return 1
     end
 
-    if not command -s impacket-ticketConverter >/dev/null
-        echo "Error: impacket-ticketConverter not found in PATH." >&2
+    set -l impacket_cmd ""
+    if command -s ticketConverter.py >/dev/null
+        set impacket_cmd "ticketConverter.py"
+    else if command -s impacket-ticketConverter >/dev/null
+        set impacket_cmd "impacket-ticketConverter"
+    else
+        echo "Error: ticketConverter.py or impacket-ticketConverter not found in PATH." >&2
         return 1
     end
 
     echo "Converting $_flag_input to $_flag_output..."
-    impacket-ticketConverter "$_flag_input" "$_flag_output"
+    eval $impacket_cmd "\"$_flag_input\" \"$_flag_output\""
 end
