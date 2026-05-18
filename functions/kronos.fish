@@ -17,11 +17,7 @@ function kronos --description "Active Directory attack orchestrator"
                     case userenum; __kronos_userenum --help
                     case dominfo;  __kronos_dominfo --help
                     case ingest;   __kronos_ingest --help
-                    case rdp;      __kronos_rdp --help
-                    case winrm;    __kronos_winrm --help
-                    case ftp;      __kronos_ftp --help
-                    case smb;      __kronos_smb --help
-                    case rpc;      __kronos_rpc --help
+                    case connect;  __kronos_connect --help
                     case asrep-roast; __kronos_asrep_roast --help
                     case kerbroast;   __kronos_kerbroast --help
                     case spray;       __kronos_spray --help
@@ -43,11 +39,7 @@ function kronos --description "Active Directory attack orchestrator"
         case userenum;    __kronos_userenum $argv
         case dominfo;     __kronos_dominfo $argv
         case ingest;      __kronos_ingest $argv
-        case rdp;         __kronos_rdp $argv
-        case winrm;       __kronos_winrm $argv
-        case ftp;         __kronos_ftp $argv
-        case smb;         __kronos_smb $argv
-        case rpc;         __kronos_rpc $argv
+        case connect;     __kronos_connect $argv
         case asrep-roast; __kronos_asrep_roast $argv
         case kerbroast;   __kronos_kerbroast $argv
         case spray;       __kronos_spray $argv

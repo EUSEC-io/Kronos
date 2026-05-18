@@ -81,10 +81,19 @@ function __kronos_request --description "Request TGT or ST and export KRB5CCNAME
         end
 
         command $impacket_cmd $req_args
+
+        if test -f "$user.ccache"
+            echo "[+] Ticket saved to: $PWD/$user.ccache"
+            echo "Run this to use it: export KRB5CCNAME=$PWD/$user.ccache"
+        end
+    else
+        set -l impacket_cmd ""
+...
+        command $impacket_cmd $req_args
     end
 
     if test -f "$user.ccache"
-        set -gx KRB5CCNAME "$PWD/$user.ccache"
-        echo "[+] Ticket imported to KRB5CCNAME=$KRB5CCNAME"
+        echo "[+] Ticket saved to: $PWD/$user.ccache"
+        echo "Run this to use it: export KRB5CCNAME=$PWD/$user.ccache"
     end
 end

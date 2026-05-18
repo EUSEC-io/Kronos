@@ -38,11 +38,12 @@ Kronos respects the following `tgt` global variables to eliminate manual targeti
 ## 🚀 Usage
 
 ### Connection Protocols
-- `kronos rdp <IP>`: Connect via RDP (xfreerdp3).
-- `kronos winrm <IP>`: Connect via WinRM (evil-winrm).
-- `kronos smb <IP>`: Interactive SMB shell (smbclient).
-- `kronos rpc <IP>`: Interactive RPC shell (rpcclient).
-- `kronos ftp <IP>`: Connect via FTP.
+- `kronos connect rdp <IP>`: Connect via RDP (xfreerdp3).
+- `kronos connect winrm <IP>`: Connect via WinRM (evil-winrm).
+- `kronos connect smb <IP>`: Interactive SMB shell (smbclient).
+- `kronos connect rpc <IP>`: Interactive RPC shell (rpcclient).
+- `kronos connect ftp <IP>`: Connect via FTP.
+- `kronos connect mssql <IP>`: Interactive MSSQL shell (mssqlclient.py).
 
 ### Active Directory Operations
 - `kronos userenum`: Enumerate users and auto-save to `valid_users.txt`.
@@ -54,7 +55,7 @@ Kronos respects the following `tgt` global variables to eliminate manual targeti
 - `kronos forcechange -t <user> -P <newpass>`: Force a password reset.
 
 ### Ticketing & Kerberos
-- `kronos request`: Request a TGT/ST and **automatically export KRB5CCNAME**.
+- `kronos request`: Request a TGT/ST and **get the manual export command**.
 - `kronos ticket`: Forge Golden/Silver tickets.
 - `kronos convert`: Convert between `.kirbi` and `.ccache`.
 
