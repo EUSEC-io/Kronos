@@ -1,6 +1,6 @@
 # description: Ingest Active Directory data using bloodhound-python
 function _kronos_ingest --description "Ingest Active Directory data using bloodhound-python"
-    argparse h/help u/username= p/password= o/output= d/domain= -- $argv
+    argparse h/help u/username= p/password= o/output= d/domain= k/kerberos -- $argv
     or return 1
 
     if set -q _flag_help
@@ -16,6 +16,7 @@ function _kronos_ingest --description "Ingest Active Directory data using bloodh
         echo "  -p, --password PASS Provide password for ingestion"
         echo "  -o, --output FILE   Output zip filename (default: <domain>-bloodhound.zip)"
         echo "  -d, --domain DOMAIN Target domain (falls back to \$TGT_AD_DOMAIN)"
+        echo "  -k, --kerberos      Use Kerberos authentication (requires KRB5CCNAME)"
         echo "  -h, --help          Show this help message"
         return 0
     end
@@ -48,7 +49,9 @@ function _kronos_ingest --description "Ingest Active Directory data using bloodh
     set -l bh_user ""
     set -l bh_pass ""
 
-    if set -q _flag_username; and set -q _flag_password
+    if set -q _flag_kerberos
+        set has_creds 1
+    else if set -q _flag_username; and set -q _flag_password
         set has_creds 1
         set bh_user $_flag_username
         set bh_pass $_flag_password
@@ -63,7 +66,7 @@ function _kronos_ingest --description "Ingest Active Directory data using bloodh
     end
 
     if test "$has_creds" -eq 0
-        echo "Error: Credentials are required. Provide them via -u/-p or ensure tgt credentials are active." >&2
+        echo "Error: Credentials or Kerberos flag are required." >&2
         return 1
     end
 
@@ -77,8 +80,15 @@ function _kronos_ingest --description "Ingest Active Directory data using bloodh
         return 1
     end
 
+    set -l cmd_str "bloodhound-python -d \"$domain\" -ns \"$target\" -c All"
+    if set -q _flag_kerberos
+        set cmd_str "$cmd_str -k"
+    else
+        set cmd_str "$cmd_str -u \"$bh_user\" -p \"$bh_pass\""
+    end
+
     echo "Running bloodhound-python against $target for domain $domain..."
-    bloodhound-python -u "$bh_user" -p "$bh_pass" -d "$domain" -ns "$target" -c All
+    eval $cmd_str
     set -l bh_status $status
 
     if test $bh_status -eq 0

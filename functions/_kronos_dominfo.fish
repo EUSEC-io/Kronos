@@ -1,6 +1,6 @@
 # description: Query domain info and password policy
 function _kronos_dominfo --description "Query domain info and password policy"
-    argparse h/help P/pass-policy u/username= p/password= N/NULL -- $argv
+    argparse h/help P/pass-policy u/username= p/password= N/NULL k/kerberos -- $argv
     or return 1
 
     if set -q _flag_help
@@ -16,6 +16,7 @@ function _kronos_dominfo --description "Query domain info and password policy"
         echo "  -u, --username USER Provide username for credentialed check (uses nxc)"
         echo "  -p, --password PASS Provide password for credentialed check (uses nxc)"
         echo "  -N, --NULL          Force NULL session enumeration (disables tgt credentials)"
+        echo "  -k, --kerberos      Use Kerberos authentication (requires KRB5CCNAME)"
         echo "  -h, --help          Show this help message"
         return 0
     end
@@ -38,6 +39,8 @@ function _kronos_dominfo --description "Query domain info and password policy"
     if set -q _flag_NULL
         # Explicitly requested NULL session
         set has_creds 0
+    else if set -q _flag_kerberos
+        set has_creds 1
     else if set -q _flag_username; and set -q _flag_password
         set has_creds 1
     else if set -q _flag_username; or set -q _flag_password
@@ -56,15 +59,21 @@ function _kronos_dominfo --description "Query domain info and password policy"
             return 1
         end
         echo "Using nxc smb for credentialed enumeration against $target..."
-        set -l nxc_cmd nxc smb $target -u $_flag_username -p $_flag_password
+        
+        set -l nxc_cmd "nxc smb $target"
+        if set -q _flag_kerberos
+            set nxc_cmd "$nxc_cmd -k"
+        else
+            set nxc_cmd "$nxc_cmd -u $_flag_username -p $_flag_password"
+        end
         
         # Add domain if available, otherwise nxc defaults to local/target name sometimes
         if test -n "$TGT_AD_DOMAIN"
-            set nxc_cmd $nxc_cmd -d $TGT_AD_DOMAIN
+            set nxc_cmd "$nxc_cmd -d $TGT_AD_DOMAIN"
         end
 
         if set -q _flag_pass_policy
-            set nxc_cmd $nxc_cmd --pass-pol
+            set nxc_cmd "$nxc_cmd --pass-pol"
         end
         
         eval $nxc_cmd

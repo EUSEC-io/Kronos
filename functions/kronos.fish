@@ -26,6 +26,18 @@ function kronos --description "Active Directory attack orchestrator"
                         _kronos_asrep_roast --help
                     case kerbroast
                         _kronos_kerbroast --help
+                    case spray
+                        _kronos_spray --help
+                    case forcechange
+                        _kronos_forcechange --help
+                    case gmsa
+                        _kronos_gmsa --help
+                    case ticket
+                        _kronos_ticket --help
+                    case convert
+                        _kronos_convert --help
+                    case request
+                        _kronos_request --help
                     case '*'
                         echo "Error: Unknown command '$subaction'" >&2
                         _kronos_help
@@ -69,6 +81,42 @@ function kronos --description "Active Directory attack orchestrator"
                 _kronos_kerbroast --help
             else
                 _kronos_kerbroast $argv
+            end
+        case spray
+            if test "$argv[1]" = "help"
+                _kronos_spray --help
+            else
+                _kronos_spray $argv
+            end
+        case forcechange
+            if test "$argv[1]" = "help"
+                _kronos_forcechange --help
+            else
+                _kronos_forcechange $argv
+            end
+        case gmsa
+            if test "$argv[1]" = "help"
+                _kronos_gmsa --help
+            else
+                _kronos_gmsa $argv
+            end
+        case ticket
+            if test "$argv[1]" = "help"
+                _kronos_ticket --help
+            else
+                _kronos_ticket $argv
+            end
+        case convert
+            if test "$argv[1]" = "help"
+                _kronos_convert --help
+            else
+                _kronos_convert $argv
+            end
+        case request
+            if test "$argv[1]" = "help"
+                _kronos_request --help
+            else
+                _kronos_request $argv
             end
         case '*'
             echo "Error: Unknown command '$action'" >&2
