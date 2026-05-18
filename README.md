@@ -91,6 +91,18 @@ kronos help
     kronos kerbroast 10.10.10.10 -u 'admin' -p 'Secret123!'
     ```
 
+*   **`lookupsid`**: Enumerate SIDs for AD objects using `impacket-lookupsid`.
+    ```bash
+    # Enumerate all SIDs (uses active tgt credentials)
+    kronos lookupsid 10.10.10.10
+    
+    # Easily extract just the Domain SID
+    kronos lookupsid 10.10.10.10 -D
+    
+    # Filter the output for a specific object (e.g. Administrator)
+    kronos lookupsid 10.10.10.10 -f 'Administrator'
+    ```
+
 *   **`spray`**: Password spray against a target using `nxc smb`.
     ```bash
     # Uses valid_users.txt (created automatically by userenum)

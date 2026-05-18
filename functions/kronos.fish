@@ -38,6 +38,8 @@ function kronos --description "Active Directory attack orchestrator"
                         _kronos_convert --help
                     case request
                         _kronos_request --help
+                    case lookupsid
+                        _kronos_lookupsid --help
                     case '*'
                         echo "Error: Unknown command '$subaction'" >&2
                         _kronos_help
@@ -117,6 +119,12 @@ function kronos --description "Active Directory attack orchestrator"
                 _kronos_request --help
             else
                 _kronos_request $argv
+            end
+        case lookupsid
+            if test "$argv[1]" = "help"
+                _kronos_lookupsid --help
+            else
+                _kronos_lookupsid $argv
             end
         case '*'
             echo "Error: Unknown command '$action'" >&2
