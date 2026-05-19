@@ -36,11 +36,11 @@ else
     echo "[+] nxc already installed."
 fi
 
-# 3. rpcclient (Samba)
-if ! command_exists rpcclient; then
-    echo "[*] rpcclient not found. Please install the 'samba-common-bin' or 'smbclient' package for your distro."
+# 3. rpcclient / smbclient (Samba)
+if ! command_exists rpcclient || ! command_exists smbclient; then
+    echo "[*] rpcclient/smbclient not found. Please install the 'samba-common-bin' or 'smbclient' package for your distro."
 else
-    echo "[+] rpcclient already installed."
+    echo "[+] rpcclient and smbclient already installed."
 fi
 
 # 4. bloodyAD
