@@ -27,6 +27,14 @@ function kronos --description "Active Directory attack orchestrator"
                     case convert;     __kronos_convert --help
                     case request;     __kronos_request --help
                     case lookupsid;   __kronos_lookupsid --help
+                    case add-user;    __kronos_add_user --help
+                    case add-member;  __kronos_add_member --help
+                    case add-computer; __kronos_add_computer --help
+                    case dacl;        __kronos_dacl --help
+                    case search;      __kronos_search --help
+                    case secretsdump; __kronos_secretsdump --help
+                    case rbcd;        __kronos_rbcd --help
+                    case shadow-credentials; __kronos_shadow_credentials --help
                     case install;     __kronos_install --help
                     case '*'
                         echo "error: unknown command '$subaction'" >&2
@@ -49,6 +57,14 @@ function kronos --description "Active Directory attack orchestrator"
         case convert;     __kronos_convert $argv
         case request;     __kronos_request $argv
         case lookupsid;   __kronos_lookupsid $argv
+        case add-user;    __kronos_add_user $argv
+        case add-member;  __kronos_add_member $argv
+        case add-computer; __kronos_add_computer $argv
+        case dacl;        __kronos_dacl $argv
+        case search;      __kronos_search $argv
+        case secretsdump; __kronos_secretsdump $argv
+        case rbcd;        __kronos_rbcd $argv
+        case shadow-credentials; __kronos_shadow_credentials $argv
         case install;     __kronos_install $argv
         case '*'
             echo "error: unknown command '$action'" >&2
