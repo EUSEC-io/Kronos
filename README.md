@@ -11,6 +11,7 @@ Kronos orchestrates the following utilities:
 - **Evil-WinRM**: Command-line WinRM access.
 - **xfreerdp3**: High-performance GUI RDP access.
 - **BloodHound-Python**: AD data ingestion for BloodHound.
+- **Gum**: Powers the interactive wizards and prompts.
 
 ## 📦 Installation
 
@@ -64,7 +65,7 @@ Kronos respects the following \`tgt\` global variables to eliminate manual targe
 
 ### Ticketing & Kerberos
 - \`kronos request\`: Request a TGT/ST and **get the manual export command**.
-- \`kronos ticket\`: Forge Golden/Silver tickets.
+- \`kronos ticket [golden|silver]\`: Forge Golden/Silver tickets. If called without flags, **an interactive wizard** will guide you through the process.
 - \`kronos convert\`: Convert between \`.kirbi\` and \`.ccache\`.
 
 ## 📜 License

