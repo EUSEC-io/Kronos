@@ -1,10 +1,36 @@
 # description: Global help for Kronos
 function __kronos_help --description "Global help for Kronos"
-    echo "Usage: kronos <command> [options]"
+    set_color cyan
+    echo "  _  _______   ____  _   _  ____   _____ "
+    echo " | |/ /  __ \ / __ \| \ | |/ __ \ / ____|"
+    echo " | ' /| |__) | |  | |  \| | |  | | (___  "
+    echo " |  < |  _  /| |  | | . ` | |  | |\___ \ "
+    echo " | . \| | \ \| |__| | |\  | |__| |____) |"
+    echo " |_|\_\_|  \_\\____/|_| \_|\____/|_____/ "
+    set_color normal
     echo ""
     echo "Active Directory attack orchestrator."
     echo ""
-    echo "Commands:"
+    echo "Kronos is a modular orchestration tool designed to automate and simplify"
+    echo "AD penetration testing by wrapping industry-standard tools into a unified CLI."
+    echo ""
+    set_color yellow
+    echo "DEPENDENCIES:"
+    set_color normal
+    echo "This tool requires several external dependencies to function flawlessly:"
+    echo "  - NetExec (nxc), Impacket Scripts, bloodyAD, kerbrute, evil-winrm,"
+    echo "    xfreerdp3, bloodhound-python, smbclient, and rpcclient."
+    echo ""
+    echo "You can install these manually or simply run:"
+    set_color green
+    echo "  kronos install"
+    set_color normal
+    echo "to automatically check and install all required utilities."
+    echo ""
+    echo "USAGE:"
+    echo "  kronos <command> [options]"
+    echo ""
+    echo "COMMANDS:"
     echo "  userenum    Run kerbrute userenum (auto-saves valid_users.txt)"
     echo "  dominfo     Query domain info and password policy"
     echo "  ingest      Ingest AD data using bloodhound-python"
