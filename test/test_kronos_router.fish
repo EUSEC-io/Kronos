@@ -14,11 +14,11 @@ function __kronos_install; echo "mock_install"; end
 @test "router: userenum dispatch" \
     (kronos userenum arg1 | string match -q "mock_userenum arg1"; echo $status) -eq 0
 
-@test "router: rdp dispatch" \
-    (kronos rdp 10.1.1.1 | string match -q "mock_rdp 10.1.1.1"; echo $status) -eq 0
+@test "router: connect rdp dispatch" \
+    (kronos connect rdp 10.1.1.1 | string match -q "mock_rdp 10.1.1.1"; echo $status) -eq 0
 
-@test "router: winrm dispatch" \
-    (kronos winrm 10.1.1.1 | string match -q "mock_winrm 10.1.1.1"; echo $status) -eq 0
+@test "router: connect winrm dispatch" \
+    (kronos connect winrm 10.1.1.1 | string match -q "mock_winrm 10.1.1.1"; echo $status) -eq 0
 
 @test "router: install dispatch" \
     (kronos install | string match -q "mock_install"; echo $status) -eq 0
