@@ -102,4 +102,17 @@ else
     echo "[+] bloodhound-python already installed."
 fi
 
+# 9. gum (Interactive UI)
+if ! command_exists gum; then
+    echo "[*] Installing gum via go..."
+    if command_exists go; then
+        go install github.com/charmbracelet/gum@latest
+        echo "[+] gum installed."
+    else
+        echo "[!] Error: 'go' is not installed. Skipping gum."
+    fi
+else
+    echo "[+] gum already installed."
+fi
+
 echo "[*] Kronos dependency check complete."

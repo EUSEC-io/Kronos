@@ -39,11 +39,15 @@ complete -c kronos -n "__fish_seen_subcommand_from connect; and not __fish_seen_
 complete -c kronos -n "__fish_seen_subcommand_from connect; and not __fish_seen_subcommand_from $protocols" -a rpc -d "Connect via RPC (rpcclient)"
 complete -c kronos -n "__fish_seen_subcommand_from connect; and not __fish_seen_subcommand_from $protocols" -a mssql -d "Connect via MSSQL (mssqlclient.py)"
 
+# Ticket subcommands
+complete -c kronos -n "__fish_seen_subcommand_from ticket; and not __fish_seen_subcommand_from golden silver" -a golden -d "Create Golden Ticket (interactive wizard)"
+complete -c kronos -n "__fish_seen_subcommand_from ticket; and not __fish_seen_subcommand_from golden silver" -a silver -d "Create Silver Ticket (interactive wizard)"
+
 # Shared flags
-set -l needs_auth dominfo connect asrep-roast kerbroast forcechange gmsa lookupsid ingest request add-user add-member add-computer dacl search secretsdump rbcd shadow-credentials
+set -l needs_auth dominfo connect asrep-roast kerbroast forcechange gmsa lookupsid ingest request add-user add-member add-computer dacl search secretsdump rbcd shadow-credentials ticket
 complete -c kronos -n "__fish_seen_subcommand_from $needs_auth" -s u -l username -d "Username"
-complete -c kronos -n "__fish_seen_subcommand_from $needs_auth" -s p -l password -d "Password"
-complete -c kronos -n "__fish_seen_subcommand_from connect kerbroast forcechange gmsa lookupsid request add-computer secretsdump" -s H -l hash -d "NTLM Hash"
+complete -c kronos -n "__fish_seen_subcommand_from dominfo connect kerbroast forcechange gmsa lookupsid ingest request" -s p -l password -d "Password"
+complete -c kronos -n "__fish_seen_subcommand_from connect kerbroast forcechange gmsa lookupsid request add-computer secretsdump ticket" -s H -l hash -d "NTLM Hash"
 complete -c kronos -n "__fish_seen_subcommand_from dominfo connect asrep-roast kerbroast forcechange gmsa lookupsid ingest add-user add-member add-computer dacl search secretsdump rbcd shadow-credentials" -s k -l kerberos -d "Use Kerberos authentication"
 complete -c kronos -n "__fish_seen_subcommand_from $commands" -s h -l help -d "Show help"
 
