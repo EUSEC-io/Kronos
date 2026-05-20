@@ -49,12 +49,13 @@ complete -c kronos -n "__fish_seen_subcommand_from ticket; and not __fish_seen_s
 complete -c kronos -n "__fish_seen_subcommand_from ticket; and not __fish_seen_subcommand_from $ticket_types" -a cross-forest -d "Create Cross-Forest Golden Ticket (interactive wizard)"
 
 # Shared flags
-set -l needs_auth dominfo connect asrep-roast kerbroast forcechange gmsa lookupsid ingest request add-user add-member add-computer dacl search secretsdump rbcd shadow-credentials ticket
+set -l needs_auth userenum dominfo connect asrep-roast kerbroast forcechange gmsa lookupsid ingest request add-user add-member add-computer dacl search secretsdump rbcd shadow-credentials ticket
 complete -c kronos -n "__fish_seen_subcommand_from $needs_auth" -s u -l username -d "Username"
 complete -c kronos -n "__fish_seen_subcommand_from dominfo connect kerbroast forcechange gmsa lookupsid ingest request" -s p -l password -d "Password"
 complete -c kronos -n "__fish_seen_subcommand_from connect kerbroast forcechange gmsa lookupsid request add-computer secretsdump ticket" -s H -l hash -d "NTLM Hash"
 complete -c kronos -n "__fish_seen_subcommand_from dominfo connect asrep-roast kerbroast forcechange gmsa lookupsid ingest add-user add-member add-computer dacl search secretsdump rbcd shadow-credentials" -s k -l kerberos -d "Use Kerberos authentication"
-complete -c kronos -n "__fish_seen_subcommand_from $commands" -s h -l help -d "Show help"
+complete -c kronos -n "__fish_seen_subcommand_from $commands" -s h -l help -d "Show help" 
+complete -c kronos -n "__fish_seen_subcommand_from $commands" -s q -l quiet -d "Skip prompts and use cached values"
 
 # Subcommand-specific flags
 complete -c kronos -n "__fish_seen_subcommand_from userenum" -s w -l wordlist -r -d "Custom wordlist"

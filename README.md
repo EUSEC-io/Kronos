@@ -26,7 +26,7 @@
 ## ✨ Features
 - 🚀 **Unified Workflow**: One command to rule them all. No more remembering complex flag syntax for 10+ different tools.
 - 🧙 **Interactive Wizards**: Guided prompts for complex attacks (Golden/Silver/Diamond/Sapphire tickets).
-- 🧠 **Smart Persistence**: Remembers your previous inputs (SIDs, Hashes, IPs) to save you from repetitive copy-pasting.
+- 🧠 **Smart Persistence**: Remembers your previous inputs (SIDs, Hashes, IPs) to save you from repetitive copy-pasting. Supports `-q/--quiet` to skip all prompts.
 - 🎯 **Deep Context**: Seamlessly pulls targets and credentials from the **[tgt](https://github.com/EUSEC-io/tgt)** framework.
 - ⚡ **Auto-Loading**: Native Fish completions and functions for a fluid CLI experience.
 
