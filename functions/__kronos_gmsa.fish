@@ -1,6 +1,6 @@
 # description: Read GMSA passwords using nxc ldap
 function __kronos_gmsa --description "Read GMSA passwords using nxc ldap"
-    argparse h/help u/username= p/password= H/hash= k/kerberos -- $argv
+    argparse h/help q/quiet u/username= p/password= H/hash= k/kerberos w/wizard -- $argv
     or return 1
 
     if set -q _flag_help
@@ -8,54 +8,68 @@ function __kronos_gmsa --description "Read GMSA passwords using nxc ldap"
         echo ""
         echo "Read GMSA passwords using nxc ldap."
         echo ""
-        echo "Arguments:"
-        echo "  TARGET              IP, hostname, or nameserver (falls back to \$TGT_DC_IP or \$TGT_DC)"
-        echo ""
         echo "Options:"
-        echo "  -u, --username USER Provide username (falls back to \$TGT_CRED_USERNAME)"
-        echo "  -p, --password PASS Provide password (falls back to \$TGT_CRED_PASSWORD)"
-        echo "  -H, --hash HASH     Provide NTLM hash"
+        echo "  -u, --username USER Auth username"
+        echo "  -p, --password PASS Auth password"
+        echo "  -H, --hash HASH     Auth NTLM hash"
         echo "  -k, --kerberos      Use Kerberos authentication"
+        echo "  -q, --quiet         Skip prompts and use fallbacks"
         echo "  -h, --help          Show this help message"
         return 0
     end
 
     set -l target $argv[1]
-    if test -z "$target"; set target $TGT_DC_IP; end
-    if test -z "$target"; set target $TGT_DC; end
-    if test -z "$target"; set target $TGT; end
-    
+    set -l auth_user $_flag_username
+    set -l auth_pass $_flag_password
+
+    # Standard Fallbacks & Cache
     if test -z "$target"
-        echo "error: target is required" >&2
-        return 1
+        set target $__KRONOS_CACHE_GMSA_TARGET
+        if test -z "$target"; set target $TGT_DC_IP; end
+        if test -z "$target"; set target $TGT_DC; end
+        if test -z "$target"; set target $TGT; end
     end
 
-    set -l user $_flag_username; if test -z "$user"; set user $TGT_USERNAME; end
-    if test -z "$user"; set user $TGT_CRED_USERNAME; end
-    
-    set -l pass $_flag_password; if test -z "$pass"; set pass $TGT_PASSWORD; end
-    if test -z "$pass"; set pass $TGT_CRED_PASSWORD; end
-
-    if not command -v nxc >/dev/null
-        echo "error: nxc not found. run 'kronos install'." >&2
-        return 1
+    if test -z "$auth_user"
+        set auth_user $__KRONOS_CACHE_GMSA_AUTH_USER
+        if test -z "$auth_user"; set auth_user $TGT_USERNAME; end
+        if test -z "$auth_user"; set auth_user $TGT_CRED_USERNAME; end
+    end
+    if test -z "$auth_pass"
+        set auth_pass $__KRONOS_CACHE_GMSA_AUTH_PASS
+        if test -z "$auth_pass"; set auth_pass $TGT_PASSWORD; end
+        if test -z "$auth_pass"; set auth_pass $TGT_CRED_PASSWORD; end
     end
 
-    set -l nxc_cmd nxc ldap $target
-    if test -n "$TGT_DC_DOMAIN"; set -a nxc_cmd -d $TGT_DC_DOMAIN; end
+    # Interactive Fallback
+    if not set -q _flag_quiet
+        if test -z "$target"; or set -q _flag_wizard
+            set target (__kronos_ask "Target DC IP/Hostname" "$target"); or return 1
+            set -U __KRONOS_CACHE_GMSA_TARGET "$target"
+        end
+        if test -z "$auth_user"; and not set -q _flag_kerberos
+            set auth_user (__kronos_ask "Auth Username" "$auth_user"); or return 1
+            set -U __KRONOS_CACHE_GMSA_AUTH_USER "$auth_user"
+        end
+    end
+
+    if test -z "$target"; echo "error: target is required" >&2; return 1; end
+
+    set -l nxc_cmd nxc ldap "$target"
+    if test -n "$TGT_DC_DOMAIN"; set -a nxc_cmd -d "$TGT_DC_DOMAIN"; end
 
     if set -q _flag_kerberos
-        set -a nxc_cmd -k -u $user -p ''
+        set -a nxc_cmd -k -u "$auth_user" -p ''
     else
-        if test -z "$user"
+        if test -z "$auth_user"
             echo "error: credentials required" >&2
             return 1
         end
-        set -a nxc_cmd -u $user
+        set -a nxc_cmd -u "$auth_user"
         if set -q _flag_hash
-            set -a nxc_cmd -H $_flag_hash
+            set -a nxc_cmd -H "$_flag_hash"
         else
-            set -a nxc_cmd -p $pass
+            set -a nxc_cmd -p "$auth_pass"
         end
     end
 

@@ -1,11 +1,6 @@
 # description: Add a user to an AD group using bloodyAD
 function __kronos_add_member --description "Add a user to an AD group using bloodyAD"
-    set -l wizard 0
-    if test (count $argv) -eq 0
-        set wizard 1
-    end
-
-    argparse h/help u/username= p/password= k/kerberos g/group= m/member= w/wizard -- $argv
+    argparse h/help q/quiet u/username= p/password= k/kerberos g/group= m/member= w/wizard -- $argv
     or return 1
 
     if set -q _flag_help
@@ -16,10 +11,11 @@ function __kronos_add_member --description "Add a user to an AD group using bloo
         echo "Options:"
         echo "  -g, --group NAME        The target group name"
         echo "  -m, --member NAME       The user to add to the group"
-        echo "  -u, --username USER     Auth username (falls back to \$TGT_CRED_USERNAME)"
-        echo "  -p, --password PASS     Auth password (falls back to \$TGT_CRED_PASSWORD)"
+        echo "  -u, --username USER     Auth username"
+        echo "  -p, --password PASS     Auth password"
         echo "  -k, --kerberos          Use Kerberos authentication"
-        echo "  -h, --help          Show this help message"
+        echo "  -q, --quiet             Skip all prompts and use fallbacks/cached values"
+        echo "  -h, --help              Show this help message"
         return 0
     end
 
@@ -29,58 +25,69 @@ function __kronos_add_member --description "Add a user to an AD group using bloo
     set -l auth_user $_flag_username
     set -l auth_pass $_flag_password
 
-    if test "$wizard" -eq 1; or set -q _flag_wizard
-        set_color cyan; echo "[*] Starting Add Member wizard..."; set_color normal
-
-        set -l def_target "$__KRONOS_CACHE_ADDMEMBER_TARGET"
-        if test -z "$def_target"; set def_target "$TGT_DC_IP"; end
-        if test -z "$def_target"; set def_target "$TGT_DC"; end
-        if test -z "$def_target"; set def_target "$TGT"; end
-        if test -n "$target"; set def_target "$target"; end
-        set target (__kronos_ask "Target DC IP/Hostname" "$def_target"); or return 1
-        set -U __KRONOS_CACHE_ADDMEMBER_TARGET "$target"
-
-        set -l def_group "$__KRONOS_CACHE_ADDMEMBER_GROUP"
-        if test -z "$def_group"; set def_group "Domain Admins"; end
-        if test -n "$group"; set def_group "$group"; end
-        set group (__kronos_ask "Target Group" "$def_group"); or return 1
-        set -U __KRONOS_CACHE_ADDMEMBER_GROUP "$group"
-
-        set -l def_member "$__KRONOS_CACHE_ADDMEMBER_MEMBER"
-        if test -n "$member"; set def_member "$member"; end
-        set member (__kronos_ask "Member to Add" "$def_member"); or return 1
-        set -U __KRONOS_CACHE_ADDMEMBER_MEMBER "$member"
-
-        if not set -q _flag_kerberos
-            set -l def_auth_user "$__KRONOS_CACHE_ADDMEMBER_AUTH_USER"
-            if test -z "$def_auth_user"; set def_auth_user "$TGT_USERNAME"; end
-            if test -z "$def_auth_user"; set def_auth_user "$TGT_CRED_USERNAME"; end
-            if test -n "$auth_user"; set def_auth_user "$auth_user"; end
-            set auth_user (__kronos_ask "Auth Username" "$def_auth_user"); or return 1
-            set -U __KRONOS_CACHE_ADDMEMBER_AUTH_USER "$auth_user"
-
-            set -l def_auth_pass "$__KRONOS_CACHE_ADDMEMBER_AUTH_PASS"
-            if test -z "$def_auth_pass"; set def_auth_pass "$TGT_PASSWORD"; end
-            if test -z "$def_auth_pass"; set def_auth_pass "$TGT_CRED_PASSWORD"; end
-            if test -n "$auth_pass"; set def_auth_pass "$auth_pass"; end
-            set auth_pass (__kronos_ask "Auth Password" "$def_auth_pass"); or return 1
-            set -U __KRONOS_CACHE_ADDMEMBER_AUTH_PASS "$auth_pass"
-        end
-    else
-        # Standard Fallbacks
+    # Standard Fallbacks & Cache
+    if test -z "$target"
+        set target $__KRONOS_CACHE_ADDMEMBER_TARGET
         if test -z "$target"; set target $TGT_DC_IP; end
         if test -z "$target"; set target $TGT_DC; end
         if test -z "$target"; set target $TGT; end
-        
+    end
+
+    if test -z "$group"; set group $__KRONOS_CACHE_ADDMEMBER_GROUP; end
+    if test -z "$member"; set member $__KRONOS_CACHE_ADDMEMBER_MEMBER; end
+
+    if test -z "$auth_user"
+        set auth_user $__KRONOS_CACHE_ADDMEMBER_AUTH_USER
         if test -z "$auth_user"; set auth_user $TGT_USERNAME; end
         if test -z "$auth_user"; set auth_user $TGT_CRED_USERNAME; end
+    end
+    if test -z "$auth_pass"
+        set auth_pass $__KRONOS_CACHE_ADDMEMBER_AUTH_PASS
         if test -z "$auth_pass"; set auth_pass $TGT_PASSWORD; end
         if test -z "$auth_pass"; set auth_pass $TGT_CRED_PASSWORD; end
     end
 
-    if test -z "$target"; echo "error: target is required"; return 1; end
-    if test -z "$group"; echo "error: --group is required"; return 1; end
-    if test -z "$member"; echo "error: --member is required"; return 1; end
+    # Interactive Wizard/Prompts
+    if not set -q _flag_quiet
+        if test -z "$target"; or test -z "$group"; or test -z "$member"; or set -q _flag_wizard
+            set_color cyan; echo "[*] Starting Add Member wizard..."; set_color normal
+            
+            set target (__kronos_ask "Target DC IP/Hostname" "$target"); or return 1
+            set -U __KRONOS_CACHE_ADDMEMBER_TARGET "$target"
+
+            set group (__kronos_ask "Target Group" "$group"); or return 1
+            set -U __KRONOS_CACHE_ADDMEMBER_GROUP "$group"
+
+            set member (__kronos_ask "Member to Add" "$member"); or return 1
+            set -U __KRONOS_CACHE_ADDMEMBER_MEMBER "$member"
+
+            if not set -q _flag_kerberos
+                set auth_user (__kronos_ask "Auth Username" "$auth_user"); or return 1
+                set -U __KRONOS_CACHE_ADDMEMBER_AUTH_USER "$auth_user"
+
+                set auth_pass (__kronos_ask "Auth Password" "$auth_pass"); or return 1
+                set -U __KRONOS_CACHE_ADDMEMBER_AUTH_PASS "$auth_pass"
+            end
+        end
+
+        # Confirmation
+        echo ""
+        echo "Configuration:"
+        echo "  Target:   $target"
+        echo "  Group:    $group"
+        echo "  Member:   $member"
+        echo "  Auth:     "(set -q _flag_kerberos; and echo "Kerberos"; or echo "$auth_user")
+        echo ""
+        if test (__kronos_ask_confirm "Add $member to $group?" n) != "yes"
+            echo "Aborted."
+            return 1
+        end
+    end
+
+    # Validation
+    if test -z "$target"; echo "error: target is required" >&2; return 1; end
+    if test -z "$group"; echo "error: --group is required" >&2; return 1; end
+    if test -z "$member"; echo "error: --member is required" >&2; return 1; end
 
     set -l domain $TGT_DC_DOMAIN
     if test -z "$domain"

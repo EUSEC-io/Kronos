@@ -1,6 +1,6 @@
 # description: Search and enumerate AD objects using bloodyAD
 function __kronos_search --description "Search and enumerate AD objects using bloodyAD"
-    argparse h/help u/username= p/password= k/kerberos q/query= a/attr= -- $argv
+    argparse h/help q/quiet u/username= p/password= k/kerberos query= a/attr= w/wizard -- $argv
     or return 1
 
     if set -q _flag_help
@@ -9,23 +9,52 @@ function __kronos_search --description "Search and enumerate AD objects using bl
         echo "Search and enumerate Active Directory objects using bloodyAD."
         echo ""
         echo "Options:"
-        echo "  -q, --query TEXT      Search query (e.g. 'Administrator' or LDAP filter)"
+        echo "  --query TEXT          Search query (e.g. '*' or LDAP filter)"
         echo "  -a, --attr NAME       Specific attribute to retrieve"
         echo "  -u, --username USER   Auth username"
         echo "  -p, --password PASS   Auth password"
         echo "  -k, --kerberos        Use Kerberos authentication"
+        echo "  -q, --quiet           Skip prompts and use fallbacks"
         echo "  -h, --help            Show this help message"
         return 0
     end
 
     set -l target $argv[1]
-    if test -z "$target"; set target $TGT_DC_IP; end
-    if test -z "$target"; set target $TGT_DC; end
-    if test -z "$target"; set target $TGT; end
+    set -l query $_flag_query
+    set -l auth_user $_flag_username
+    set -l auth_pass $_flag_password
+
+    # Standard Fallbacks & Cache
     if test -z "$target"
-        echo "error: target is required" >&2
-        return 1
+        set target $__KRONOS_CACHE_SEARCH_TARGET
+        if test -z "$target"; set target $TGT_DC_IP; end
+        if test -z "$target"; set target $TGT_DC; end
+        if test -z "$target"; set target $TGT; end
     end
+
+    if test -z "$auth_user"
+        set auth_user $__KRONOS_CACHE_SEARCH_AUTH_USER
+        if test -z "$auth_user"; set auth_user $TGT_USERNAME; end
+        if test -z "$auth_user"; set auth_user $TGT_CRED_USERNAME; end
+    end
+    if test -z "$auth_pass"
+        set auth_pass $__KRONOS_CACHE_SEARCH_AUTH_PASS
+        if test -z "$auth_pass"; set auth_pass $TGT_PASSWORD; end
+        if test -z "$auth_pass"; set auth_pass $TGT_CRED_PASSWORD; end
+    end
+
+    # Interactive Fallback
+    if not set -q _flag_quiet
+        if test -z "$target"; or set -q _flag_wizard
+            set target (__kronos_ask "Target DC IP/Hostname" "$target"); or return 1
+            set -U __KRONOS_CACHE_SEARCH_TARGET "$target"
+        end
+        if test -z "$query"; and not set -q _flag_wizard
+             set query (__kronos_ask "Search Query" "*"); or return 1
+        end
+    end
+
+    if test -z "$target"; echo "error: target is required" >&2; return 1; end
 
     set -l domain $TGT_DC_DOMAIN
     if test -z "$domain"
@@ -37,12 +66,6 @@ function __kronos_search --description "Search and enumerate AD objects using bl
     if set -q _flag_kerberos
         set -a cmd_str -k
     else
-        set -l auth_user $_flag_username; if test -z "$auth_user"; set auth_user $TGT_USERNAME; end
-        if test -z "$auth_user"; set auth_user $TGT_CRED_USERNAME; end
-
-        set -l auth_pass $_flag_password; if test -z "$auth_pass"; set auth_pass $TGT_PASSWORD; end
-        if test -z "$auth_pass"; set auth_pass $TGT_CRED_PASSWORD; end
-
         if test -z "$auth_user"
             echo "error: auth credentials required" >&2
             return 1
@@ -50,8 +73,7 @@ function __kronos_search --description "Search and enumerate AD objects using bl
         set -a cmd_str -u "$auth_user" -p "$auth_pass"
     end
 
-    set -l query "*"
-    if set -q _flag_query; set query $_flag_query; end
+    if test -z "$query"; set query "*"; end
 
     set -a cmd_str get object "$query"
     if set -q _flag_attr
