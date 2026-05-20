@@ -46,25 +46,27 @@ Kronos stands on the shoulders of giants:
 
 ## 📦 Installation
 
-### 1. Link Fish Components
-Kronos is designed to be auto-loaded by your shell. Run these commands to install the symlinks:
+### 1. Install via Fisher (Recommended)
+The easiest way to install Kronos is using the **[fisher](https://github.com/jorgebucaran/fisher)** plugin manager:
 
 ```bash
-# Create directories if they don't exist
-mkdir -p ~/.config/fish/functions ~/.config/fish/completions
-
-# Link Kronos functions and completions
-ln -sf /path/to/Kronos-Active-Directory-attack-orchestrator/functions/*.fish ~/.config/fish/functions/
-ln -sf /path/to/Kronos-Active-Directory-attack-orchestrator/completions/kronos.fish ~/.config/fish/completions/
+fisher install EUSEC-io/Kronos
 ```
 
-### 2. Install External Dependencies
-You don't need to install every tool manually. Kronos comes with an automated bootstrap script:
+### 2. Manual Installation
+If you prefer to link the files manually:
+```bash
+mkdir -p ~/.config/fish/functions ~/.config/fish/completions
+ln -sf /path/to/Kronos/functions/*.fish ~/.config/fish/functions/
+ln -sf /path/to/Kronos/completions/kronos.fish ~/.config/fish/completions/
+```
+
+### 3. Bootstrap Dependencies
+After installing the Fish functions, run the automated bootstrap script to install NetExec, Impacket, bloodyAD, Kerbrute, and more:
 
 ```bash
 kronos install
 ```
-*This will check for Go, Python/Pipx, and Ruby, then install NetExec, Impacket, bloodyAD, Kerbrute, and more.*
 
 ---
 
