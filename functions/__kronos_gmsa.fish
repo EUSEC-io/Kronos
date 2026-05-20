@@ -22,14 +22,13 @@ function __kronos_gmsa --description "Read GMSA passwords using nxc ldap"
     set -l auth_user $_flag_username
     set -l auth_pass $_flag_password
 
-    # Standard Fallbacks & Cache
+    # Load defaults for prompts
     if test -z "$target"
         set target $__KRONOS_CACHE_GMSA_TARGET
         if test -z "$target"; set target $TGT_DC_IP; end
         if test -z "$target"; set target $TGT_DC; end
         if test -z "$target"; set target $TGT; end
     end
-
     if test -z "$auth_user"
         set auth_user $__KRONOS_CACHE_GMSA_AUTH_USER
         if test -z "$auth_user"; set auth_user $TGT_USERNAME; end
@@ -41,15 +40,27 @@ function __kronos_gmsa --description "Read GMSA passwords using nxc ldap"
         if test -z "$auth_pass"; set auth_pass $TGT_CRED_PASSWORD; end
     end
 
-    # Interactive Fallback
+    # Interactive Wizard
     if not set -q _flag_quiet
-        if test -z "$target"; or set -q _flag_wizard
-            set target (__kronos_ask "Target DC IP/Hostname" "$target"); or return 1
-            set -U __KRONOS_CACHE_GMSA_TARGET "$target"
-        end
-        if test -z "$auth_user"; and not set -q _flag_kerberos
+        set_color cyan; echo "[*] Starting GMSA wizard..."; set_color normal
+
+        set target (__kronos_ask "Target DC IP/Hostname" "$target"); or return 1
+        set -U __KRONOS_CACHE_GMSA_TARGET "$target"
+
+        if not set -q _flag_kerberos
             set auth_user (__kronos_ask "Auth Username" "$auth_user"); or return 1
             set -U __KRONOS_CACHE_GMSA_AUTH_USER "$auth_user"
+
+            set -l def_auth_val "$auth_pass"
+            if test -n "$_flag_hash"; set def_auth_val "$_flag_hash"; end
+            set -l auth_input (__kronos_ask "Auth Password or Hash" "$def_auth_val"); or return 1
+            set -U __KRONOS_CACHE_GMSA_AUTH_PASS "$auth_input"
+            
+            if string match -rq '^[a-fA-F0-9]{32}:[a-fA-F0-9]{32}$|^[a-fA-F0-9]{32}$' -- "$auth_input"
+                set _flag_hash "$auth_input"; set auth_pass ""
+            else
+                set auth_pass "$auth_input"; set _flag_hash ""
+            end
         end
     end
 
@@ -66,7 +77,7 @@ function __kronos_gmsa --description "Read GMSA passwords using nxc ldap"
             return 1
         end
         set -a nxc_cmd -u "$auth_user"
-        if set -q _flag_hash
+        if test -n "$_flag_hash"
             set -a nxc_cmd -H "$_flag_hash"
         else
             set -a nxc_cmd -p "$auth_pass"

@@ -1,7 +1,7 @@
 # description: Active Directory attack orchestrator
 function kronos --description "Active Directory attack orchestrator"
     set -l action $argv[1]
-    set -l commands userenum dominfo ingest connect search asrep-roast kerbroast lookupsid spray forcechange gmsa add-user add-member add-computer dacl secretsdump rbcd shadow-credentials ticket convert request install help
+    set -l commands userenum dominfo ingest connect search asrep-roast kerbroast lookupsid spray forcechange gmsa ticket convert request install help
 
     if test -z "$action"
         # Interactive Mode
@@ -18,7 +18,8 @@ function kronos --description "Active Directory attack orchestrator"
         echo "AD penetration testing by wrapping industry-standard tools into a unified CLI."
         echo ""
         
-        set action (__kronos_ask_choice "Pick a command to execute" "help" $commands); or return 1
+        # Start at top (default to userenum)
+        set action (__kronos_ask_choice "Pick a command to execute" "userenum" $commands); or return 1
     end
     
     if test "$action" = "help" -o "$action" = "-h" -o "$action" = "--help"
