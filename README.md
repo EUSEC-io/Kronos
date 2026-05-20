@@ -64,8 +64,8 @@ Kronos respects the following \`tgt\` global variables to eliminate manual targe
 - \`kronos shadow-credentials -t <user>\`: Perform Shadow Credentials attack.
 
 ### Ticketing & Kerberos
-- \`kronos request\`: Request a TGT/ST and **get the manual export command**.
-- \`kronos ticket [golden|silver]\`: Forge Golden/Silver tickets. If called without flags, **an interactive wizard** will guide you through the process.
+- \`kronos request\`: Request a TGT/ST and **automatically export KRB5CCNAME**.
+- \`kronos ticket [golden|silver|diamond]\`: Forge Golden/Silver/Diamond tickets. If called without flags, **an interactive wizard** will guide you through the process.
 - \`kronos convert\`: Convert between \`.kirbi\` and \`.ccache\`.
 
 ## 📜 License

@@ -24,7 +24,7 @@ complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a search -d "
 complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a secretsdump -d "Dump AD secrets (secretsdump.py)"
 complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a rbcd -d "Perform RBCD attack"
 complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a shadow-credentials -d "Perform Shadow Credentials attack"
-complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a ticket -d "Create Golden/Silver tickets"
+complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a ticket -d "Create Golden/Silver/Diamond tickets"
 complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a convert -d "Convert kirbi/ccache tickets"
 complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a request -d "Request TGT/ST (getTGT/getST)"
 complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a lookupsid -d "Enumerate AD SIDs (lookupsid.py)"
@@ -40,8 +40,9 @@ complete -c kronos -n "__fish_seen_subcommand_from connect; and not __fish_seen_
 complete -c kronos -n "__fish_seen_subcommand_from connect; and not __fish_seen_subcommand_from $protocols" -a mssql -d "Connect via MSSQL (mssqlclient.py)"
 
 # Ticket subcommands
-complete -c kronos -n "__fish_seen_subcommand_from ticket; and not __fish_seen_subcommand_from golden silver" -a golden -d "Create Golden Ticket (interactive wizard)"
-complete -c kronos -n "__fish_seen_subcommand_from ticket; and not __fish_seen_subcommand_from golden silver" -a silver -d "Create Silver Ticket (interactive wizard)"
+complete -c kronos -n "__fish_seen_subcommand_from ticket; and not __fish_seen_subcommand_from golden silver diamond" -a golden -d "Create Golden Ticket (interactive wizard)"
+complete -c kronos -n "__fish_seen_subcommand_from ticket; and not __fish_seen_subcommand_from golden silver diamond" -a silver -d "Create Silver Ticket (interactive wizard)"
+complete -c kronos -n "__fish_seen_subcommand_from ticket; and not __fish_seen_subcommand_from golden silver diamond" -a diamond -d "Create Diamond Ticket (interactive wizard)"
 
 # Shared flags
 set -l needs_auth dominfo connect asrep-roast kerbroast forcechange gmsa lookupsid ingest request add-user add-member add-computer dacl search secretsdump rbcd shadow-credentials ticket
@@ -77,6 +78,10 @@ complete -c kronos -n "__fish_seen_subcommand_from kerbroast" -s t -l target -d 
 complete -c kronos -n "__fish_seen_subcommand_from spray" -s u -l userlist -r -d "User list"
 complete -c kronos -n "__fish_seen_subcommand_from ticket" -s S -l sid -r -d "Domain SID"
 complete -c kronos -n "__fish_seen_subcommand_from ticket" -s s -l spn -r -d "Target SPN"
+complete -c kronos -n "__fish_seen_subcommand_from ticket" -s I -l user-id -r -d "Target User RID"
+complete -c kronos -n "__fish_seen_subcommand_from ticket" -s G -l groups -r -d "Target Group RIDs"
+complete -c kronos -n "__fish_seen_subcommand_from ticket" -s A -l auth-user -r -d "Auth Username"
+complete -c kronos -n "__fish_seen_subcommand_from ticket" -s P -l auth-pass -r -d "Auth Password"
 complete -c kronos -n "__fish_seen_subcommand_from request" -s s -l spn -r -d "Target SPN"
 complete -c kronos -n "__fish_seen_subcommand_from lookupsid" -s f -l filter -r -d "Filter output"
 complete -c kronos -n "__fish_seen_subcommand_from lookupsid" -s D -l domain-sid -d "Only show Domain SID"
