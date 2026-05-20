@@ -98,6 +98,8 @@ function __kronos_rpc --description "Connect to target using rpcclient (RPC)"
         if test -n "$hash"; set -a rpc_args --pw-nt-hash $hash; end
     end
 
+    __kronos_check_dep rpcclient; or return 1
+
     echo "[*] Connecting to $target via RPC..."
     command rpcclient $rpc_args
 end

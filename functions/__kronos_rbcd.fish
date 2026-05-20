@@ -61,6 +61,8 @@ function __kronos_rbcd --description "Resource-Based Constrained Delegation (RBC
 
     set -a cmd_str $action rbcd "$_flag_target_computer" "$_flag_delegate_to"
 
+    __kronos_check_dep bloodyAD; or return 1
+
     echo "[*] Performing RBCD $action on $_flag_target_computer for $_flag_delegate_to..."
     command $cmd_str
 end

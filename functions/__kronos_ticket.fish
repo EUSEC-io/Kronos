@@ -213,6 +213,9 @@ function __kronos_ticket --description "Create advanced AD tickets using tickete
     end
     
     set -a ticket_args "$user"
+
+    __kronos_check_dep $impacket_cmd; or return 1
+
     command $impacket_cmd $ticket_args
     
     if test -f "$user.ccache"

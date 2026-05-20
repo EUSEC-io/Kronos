@@ -60,6 +60,8 @@ function __kronos_shadow_credentials --description "Shadow Credentials attack (K
 
     set -a cmd_str $action shadowCredentials "$_flag_target_object"
 
+    __kronos_check_dep bloodyAD; or return 1
+
     echo "[*] Performing Shadow Credentials $action on $_flag_target_object..."
     command $cmd_str
 end

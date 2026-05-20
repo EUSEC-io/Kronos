@@ -66,6 +66,8 @@ function __kronos_ingest --description "Ingest Active Directory data using blood
         set outfile $_flag_output
     end
 
+    __kronos_check_dep bloodhound-python; or return 1
+
     echo "[*] Running bloodhound-python against $target ($domain)..."
     command bloodhound-python $bh_args
     set -l bh_status $status

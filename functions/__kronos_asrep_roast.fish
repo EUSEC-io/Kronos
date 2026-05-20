@@ -58,6 +58,8 @@ function __kronos_asrep_roast --description "Run AS-REP Roasting using GetNPUser
         set -a roast_args -k
     end
 
+    __kronos_check_dep $impacket_cmd; or return 1
+
     echo "[*] Running $impacket_cmd against $target for user $user@$domain..."
     command $impacket_cmd $roast_args
 end

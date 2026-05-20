@@ -70,6 +70,8 @@ function __kronos_lookupsid --description "Enumerate SIDs for AD objects using l
     end
     set cmd_str "$cmd_str@$target"
 
+    __kronos_check_dep $impacket_cmd; or return 1
+
     if set -q _flag_domain_sid
         echo "[*] Retrieving Domain SID from $target..."
         eval "$cmd_str | grep -i 'Domain SID'"

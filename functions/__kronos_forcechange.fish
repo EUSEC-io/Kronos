@@ -77,6 +77,8 @@ function __kronos_forcechange --description "Force change a user's password usin
 
     set -a cmd_str set password "$_flag_target_user" "$_flag_new_password"
 
+    __kronos_check_dep bloodyAD; or return 1
+
     echo "[*] Force-changing password for $_flag_target_user via bloodyAD..."
     command $cmd_str
 end

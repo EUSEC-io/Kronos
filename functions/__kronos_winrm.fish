@@ -91,5 +91,6 @@ function __kronos_winrm --description "Connect to target using evil-winrm (WinRM
     end
 
     echo "[*] Connecting to $target via WinRM (evil-winrm)..."
+    __kronos_check_dep evil-winrm; or return 1
     command evil-winrm $winrm_args
 end

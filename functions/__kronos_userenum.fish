@@ -57,6 +57,8 @@ function __kronos_userenum --description "Run kerbrute userenum"
         end
     end
 
+    __kronos_check_dep $kerbrute_bin; or return 1
+
     echo "[*] Running $kerbrute_bin userenum against $target ($domain)..."
     command $kerbrute_bin userenum --dc $target -d $domain -o .kerbrute_out.txt $userlist
     

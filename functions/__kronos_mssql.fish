@@ -96,17 +96,7 @@ function __kronos_mssql --description "Connect to target using mssqlclient.py (M
         end
     end
 
-    echo "[*] Connecting to $target via MSSQL ($impacket_cmd)..."
-    command $impacket_cmd $mssql_args
-end
-$pass"; set pass $TGT_CRED_PASSWORD; end
-            if test -z "$user"; or test -z "$pass"
-                 echo "error: credentials or kerberos flag required" >&2
-                 return 1
-            end
-            set -a mssql_args "$domain/$user:$pass@$target"
-        end
-    end
+    __kronos_check_dep $impacket_cmd; or return 1
 
     echo "[*] Connecting to $target via MSSQL ($impacket_cmd)..."
     command $impacket_cmd $mssql_args

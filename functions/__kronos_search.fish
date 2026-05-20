@@ -58,6 +58,8 @@ function __kronos_search --description "Search and enumerate AD objects using bl
         set -a cmd_str --attr "$_flag_attr"
     end
 
+    __kronos_check_dep bloodyAD; or return 1
+
     echo "[*] Searching for '$query' in AD..."
     command $cmd_str
 end

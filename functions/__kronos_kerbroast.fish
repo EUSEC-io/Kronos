@@ -76,6 +76,8 @@ function __kronos_kerbroast --description "Run Kerberoasting using GetUserSPNs.p
         set -a roast_args -request
     end
 
+    __kronos_check_dep $impacket_cmd; or return 1
+
     echo "[*] Running $impacket_cmd against $target..."
     command $impacket_cmd $roast_args
 end

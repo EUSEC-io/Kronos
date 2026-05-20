@@ -65,6 +65,8 @@ function __kronos_dacl --description "Manipulate AD object DACLs using bloodyAD"
 
     set -a cmd_str $action dacl "$_flag_target_object" "$_flag_member" "$permission"
 
+    __kronos_check_dep bloodyAD; or return 1
+
     echo "[*] Performing DACL $action ($permission) on $_flag_target_object for $_flag_member..."
     command $cmd_str
 end

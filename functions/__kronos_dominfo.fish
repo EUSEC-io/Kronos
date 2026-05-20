@@ -39,33 +39,12 @@ function __kronos_dominfo --description "Query domain info and password policy"
 
     set -l domain $TGT_DC_DOMAIN
 
-    if not set -q _flag_NULL; and test -n "$user"
-        if not command -v nxc >/dev/null
-            echo "error: nxc not found. run 'kronos install'." >&2
-            return 1
-        end
-
-        set -l nxc_cmd nxc smb $target
-        if test -n "$domain"; set -a nxc_cmd -d $domain; end
-        
-        if set -q _flag_kerberos
-            set -a nxc_cmd -k -u $user -p ''
-        else
-            set -a nxc_cmd -u $user -p $pass
-        end
-
-        if set -q _flag_pass_policy
-            set -a nxc_cmd --pass-pol
-        end
-        
+    if test "$has_creds" -eq 1
+        __kronos_check_dep nxc; or return 1
         echo "[*] Querying dominfo via nxc smb..."
         command $nxc_cmd
     else
-        if not command -v rpcclient >/dev/null
-            echo "error: rpcclient not found." >&2
-            return 1
-        end
-
+        __kronos_check_dep rpcclient; or return 1
         set -l rpc_cmds "querydominfo"
         if set -q _flag_pass_policy
             set rpc_cmds "$rpc_cmds; getdompwinfo"

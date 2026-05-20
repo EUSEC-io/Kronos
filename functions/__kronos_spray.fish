@@ -54,6 +54,8 @@ function __kronos_spray --description "Password spray using nxc smb"
         set -a nxc_cmd -d $TGT_DC_DOMAIN
     end
 
+    __kronos_check_dep nxc; or return 1
+
     echo "[*] Running password spray against $target..."
     command $nxc_cmd
 end

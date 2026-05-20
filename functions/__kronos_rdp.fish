@@ -119,5 +119,6 @@ function __kronos_rdp --description "Connect to target using xfreerdp3 (RDP)"
     end
 
     echo "[*] Connecting to $target via RDP ($rdp_bin)..."
+    __kronos_check_dep $rdp_bin; or return 1
     command $rdp_bin $rdp_args
 end

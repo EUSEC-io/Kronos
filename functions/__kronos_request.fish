@@ -76,6 +76,8 @@ function __kronos_request --description "Request TGT or ST and export KRB5CCNAME
         set -a req_args "$domain/$user:$pass"
     end
 
+    __kronos_check_dep $impacket_cmd; or return 1
+
     command $impacket_cmd $req_args
 
     if test -f "$user.ccache"

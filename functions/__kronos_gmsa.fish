@@ -61,6 +61,8 @@ function __kronos_gmsa --description "Read GMSA passwords using nxc ldap"
 
     set -a nxc_cmd --gmsa
 
+    __kronos_check_dep nxc; or return 1
+
     echo "[*] Reading GMSA passwords via nxc ldap..."
     command $nxc_cmd
 end

@@ -30,6 +30,8 @@ function __kronos_convert --description "Convert tickets between kirbi and ccach
         return 1
     end
 
+    __kronos_check_dep $impacket_cmd; or return 1
+
     echo "[*] Converting $_flag_input to $_flag_output..."
     command $impacket_cmd "$_flag_input" "$_flag_output"
 end

@@ -107,6 +107,8 @@ function __kronos_smb --description "Connect to target using smbclient (SMB)"
         end
     end
 
+    __kronos_check_dep smbclient; or return 1
+
     echo "[*] Connecting to //$target/$share via SMB..."
     command smbclient $smb_args
 end
