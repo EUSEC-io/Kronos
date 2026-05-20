@@ -39,12 +39,9 @@ Kronos respects the following \`tgt\` global variables to eliminate manual targe
 ## 🚀 Usage
 
 ### Connection Protocols
-- \`kronos connect rdp <IP>\`: Connect via RDP (xfreerdp3).
-- \`kronos connect winrm <IP>\`: Connect via WinRM (evil-winrm).
-- \`kronos connect smb <IP>\`: Interactive SMB shell (smbclient).
-- \`kronos connect rpc <IP>\`: Interactive RPC shell (rpcclient).
-- \`kronos connect ftp <IP>\`: Connect via FTP.
-- \`kronos connect mssql <IP>\`: Interactive MSSQL shell (mssqlclient.py).
+- \`kronos connect\`: Starts an **interactive protocol selector** (rdp, winrm, smb, rpc, ftp, mssql).
+- \`kronos connect <proto> <IP>\`: Connect directly via a specific protocol.
+- **Interactive Wizards**: Each protocol has a guided wizard (e.g., \`rdp\` asks for resolution, fullscreen, and drive sharing).
 
 ### Active Directory Operations
 - \`kronos userenum\`: Enumerate users and auto-save to \`valid_users.txt\`.
@@ -65,7 +62,7 @@ Kronos respects the following \`tgt\` global variables to eliminate manual targe
 
 ### Ticketing & Kerberos
 - \`kronos request\`: Request a TGT/ST and **automatically export KRB5CCNAME**.
-- \`kronos ticket [golden|silver|diamond]\`: Forge Golden/Silver/Diamond tickets. If called without flags, **an interactive wizard** will guide you through the process.
+- \`kronos ticket [golden|silver|diamond|sapphire]\`: Forge tickets. If called without flags, **an interactive wizard** will guide you through the process.
 - \`kronos convert\`: Convert between \`.kirbi\` and \`.ccache\`.
 
 ## 📜 License
