@@ -1,10 +1,10 @@
 # description: Connect to target using ftp (FTP)
 function __kronos_ftp --description "Connect to target using ftp (FTP)"
-    argparse h/help u/username= p/password= -- $argv
+    argparse h/help u/username= p/password= w/wizard -- $argv
     or return 1
 
     if set -q _flag_help
-        echo "Usage: kronos ftp [TARGET] [OPTIONS]"
+        echo "Usage: kronos connect ftp [TARGET] [OPTIONS]"
         echo ""
         echo "Connect to a target via FTP."
         echo ""
@@ -16,23 +16,36 @@ function __kronos_ftp --description "Connect to target using ftp (FTP)"
     end
 
     set -l target $argv[1]
-    if test -z "$target"
-        set target $TGT
+    set -l user $_flag_username
+
+    if set -q _flag_wizard
+        set_color cyan; echo "[*] Starting FTP connection wizard..."; set_color normal
+        
+        set -l def_target "$__KRONOS_CACHE_FTP_TARGET"
+        if test -z "$def_target"; set def_target "$TGT"; end
+        if test -n "$target"; set def_target "$target"; end
+        set target (__kronos_ask "Target IP/Hostname" "$def_target"); or return 1
+        set -U __KRONOS_CACHE_FTP_TARGET "$target"
+
+        set -l def_user "$__KRONOS_CACHE_FTP_USER"
+        if test -z "$def_user"; set def_user "$TGT_CRED_USERNAME"; end
+        if test -n "$user"; set def_user "$user"; end
+        set user (__kronos_ask "Username" "$def_user"); or return 1
+        set -U __KRONOS_CACHE_FTP_USER "$user"
+    else
+        # Standard Fallbacks
+        if test -z "$target"; set target $TGT; end
+        if test -z "$user"; set user $TGT_CRED_USERNAME; end
     end
 
     if test -z "$target"
-        echo "error: target is required (pass as argument or set \$TGT)" >&2
+        echo "error: target is required" >&2
         return 1
     end
 
     if not command -v ftp >/dev/null
         echo "error: ftp client not found in PATH" >&2
         return 1
-    end
-
-    set -l user $_flag_username
-    if test -z "$user"
-        set user $TGT_CRED_USERNAME
     end
 
     echo "[*] Connecting to $target via FTP..."

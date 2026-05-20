@@ -3,8 +3,7 @@ function __kronos_connect --description "Dispatcher for protocol-specific connec
     set -l subaction $argv[1]
     
     if test -z "$subaction"
-        __kronos_help
-        return 1
+        set subaction (__kronos_ask_choice "Pick a protocol to connect" "rdp" rdp winrm smb rpc mssql ftp); or return 1
     end
     
     set -e argv[1]
@@ -28,12 +27,12 @@ function __kronos_connect --description "Dispatcher for protocol-specific connec
             else
                 __kronos_help
             end
-        case rdp;    __kronos_rdp $argv
-        case winrm;  __kronos_winrm $argv
-        case ftp;    __kronos_ftp $argv
-        case smb;    __kronos_smb $argv
-        case rpc;    __kronos_rpc $argv
-        case mssql;  __kronos_mssql $argv
+        case rdp;    __kronos_rdp $argv --wizard
+        case winrm;  __kronos_winrm $argv --wizard
+        case ftp;    __kronos_ftp $argv --wizard
+        case smb;    __kronos_smb $argv --wizard
+        case rpc;    __kronos_rpc $argv --wizard
+        case mssql;  __kronos_mssql $argv --wizard
         case '*'
             echo "error: unknown protocol '$subaction'" >&2
             __kronos_help

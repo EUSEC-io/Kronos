@@ -1,10 +1,10 @@
 # description: Connect to target using evil-winrm (WinRM)
 function __kronos_winrm --description "Connect to target using evil-winrm (WinRM)"
-    argparse h/help u/username= p/password= H/hash= k/kerberos -- $argv
+    argparse h/help u/username= p/password= H/hash= k/kerberos w/wizard -- $argv
     or return 1
 
     if set -q _flag_help
-        echo "Usage: kronos winrm [TARGET] [OPTIONS]"
+        echo "Usage: kronos connect winrm [TARGET] [OPTIONS]"
         echo ""
         echo "Connect to a target via WinRM using evil-winrm."
         echo ""
@@ -18,15 +18,49 @@ function __kronos_winrm --description "Connect to target using evil-winrm (WinRM
     end
 
     set -l target $argv[1]
-    if test -z "$target"; set target $TGT; end
+    set -l user $_flag_username
+    set -l pass $_flag_password
+    set -l hash $_flag_hash
+
+    if set -q _flag_wizard
+        set_color cyan; echo "[*] Starting WinRM connection wizard..."; set_color normal
+        
+        set -l def_target "$__KRONOS_CACHE_WINRM_TARGET"
+        if test -z "$def_target"; set def_target "$TGT"; end
+        if test -n "$target"; set def_target "$target"; end
+        set target (__kronos_ask "Target IP/Hostname" "$def_target"); or return 1
+        set -U __KRONOS_CACHE_WINRM_TARGET "$target"
+
+        set -l def_user "$__KRONOS_CACHE_WINRM_USER"
+        if test -z "$def_user"; set def_user "$TGT_CRED_USERNAME"; end
+        if test -n "$user"; set def_user "$user"; end
+        set user (__kronos_ask "Username" "$def_user"); or return 1
+        set -U __KRONOS_CACHE_WINRM_USER "$user"
+
+        if not set -q _flag_kerberos
+            set -l def_auth_val "$__KRONOS_CACHE_WINRM_AUTH_VAL"
+            if test -z "$def_auth_val"; set def_auth_val "$TGT_CRED_PASSWORD"; end
+            if test -n "$pass"; set def_auth_val "$pass"; end
+            if test -n "$hash"; set def_auth_val "$hash"; end
+            set -l auth_input (__kronos_ask "Password or Hash" "$def_auth_val"); or return 1
+            set -U __KRONOS_CACHE_WINRM_AUTH_VAL "$auth_input"
+            
+            if string match -rq '^[a-fA-F0-9]{32}:[a-fA-F0-9]{32}$|^[a-fA-F0-9]{32}$' -- "$auth_input"
+                set hash "$auth_input"; set pass ""
+            else
+                set pass "$auth_input"; set hash ""
+            end
+        end
+    else
+        # Standard Fallbacks
+        if test -z "$target"; set target $TGT; end
+        if test -z "$user"; set user $TGT_CRED_USERNAME; end
+    end
 
     if test -z "$target"
         echo "error: target is required" >&2
         return 1
     end
-
-    set -l user $_flag_username
-    if test -z "$user"; set user $TGT_CRED_USERNAME; end
 
     if not command -v evil-winrm >/dev/null
         echo "error: evil-winrm not found. run 'kronos install'." >&2
@@ -39,14 +73,11 @@ function __kronos_winrm --description "Connect to target using evil-winrm (WinRM
     if set -q _flag_kerberos
         set -a winrm_args -k
         if test -n "$TGT_DC_REALM"; set -a winrm_args -r "$TGT_DC_REALM"; end
-        
-        # Support DC targeting
         if test -n "$TGT_DC_IP"; set -a winrm_args -ip "$TGT_DC_IP"
         else if test -n "$TGT_DC"; set -a winrm_args -ip "$TGT_DC"; end
-    else if set -q _flag_hash
-        set -a winrm_args -H $_flag_hash
+    else if test -n "$hash"
+        set -a winrm_args -H $hash
     else
-        set -l pass $_flag_password
         if test -z "$pass"; set pass $TGT_CRED_PASSWORD; end
         if test -n "$pass"; set -a winrm_args -p $pass; end
     end
