@@ -21,6 +21,7 @@ function __kronos_search --description "Search and enumerate AD objects using bl
     set -l target $argv[1]
     if test -z "$target"; set target $TGT_DC_IP; end
     if test -z "$target"; set target $TGT_DC; end
+    if test -z "$target"; set target $TGT; end
     if test -z "$target"
         echo "error: target is required" >&2
         return 1
@@ -36,8 +37,12 @@ function __kronos_search --description "Search and enumerate AD objects using bl
     if set -q _flag_kerberos
         set -a cmd_str -k
     else
-        set -l auth_user $_flag_username; if test -z "$auth_user"; set auth_user $TGT_CRED_USERNAME; end
-        set -l auth_pass $_flag_password; if test -z "$auth_pass"; set auth_pass $TGT_CRED_PASSWORD; end
+        set -l auth_user $_flag_username; if test -z "$auth_user"; set auth_user $TGT_USERNAME; end
+        if test -z "$auth_user"; set auth_user $TGT_CRED_USERNAME; end
+
+        set -l auth_pass $_flag_password; if test -z "$auth_pass"; set auth_pass $TGT_PASSWORD; end
+        if test -z "$auth_pass"; set auth_pass $TGT_CRED_PASSWORD; end
+
         if test -z "$auth_user"
             echo "error: auth credentials required" >&2
             return 1

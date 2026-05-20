@@ -18,15 +18,9 @@ function __kronos_userenum --description "Run kerbrute userenum"
     end
 
     set -l target $argv[1]
-    if test -z "$target"
-        set target $TGT_DC_IP
-    end
-    if test -z "$target"
-        set target $TGT_DC
-    end
-    if test -z "$target"
-        set target $TGT
-    end
+    if test -z "$target"; set target $TGT_DC_IP; end
+    if test -z "$target"; set target $TGT_DC; end
+    if test -z "$target"; set target $TGT; end
     
     if test -z "$target"
         echo "error: target is required (pass as argument or set \$TGT_DC_IP / \$TGT)" >&2

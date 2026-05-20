@@ -43,6 +43,7 @@ function __kronos_smb --description "Connect to target using smbclient (SMB)"
 
         if not set -q _flag_kerberos
             set -l def_user "$__KRONOS_CACHE_SMB_USER"
+            if test -z "$def_user"; set def_user $TGT_USERNAME; end
             if test -z "$def_user"; set def_user "$TGT_CRED_USERNAME"; end
             if test -n "$user"; set def_user "$user"; end
             set user (__kronos_ask "Username" "$def_user"); or return 1
@@ -55,6 +56,7 @@ function __kronos_smb --description "Connect to target using smbclient (SMB)"
             set -U __KRONOS_CACHE_SMB_DOMAIN "$domain"
 
             set -l def_auth_val "$__KRONOS_CACHE_SMB_AUTH_VAL"
+            if test -z "$def_auth_val"; set def_auth_val $TGT_PASSWORD; end
             if test -z "$def_auth_val"; set def_auth_val "$TGT_CRED_PASSWORD"; end
             if test -n "$pass"; set def_auth_val "$pass"; end
             if test -n "$hash"; set def_auth_val "$hash"; end
@@ -96,12 +98,19 @@ function __kronos_smb --description "Connect to target using smbclient (SMB)"
         if test -n "$hash"
             set -a smb_args --pw-nt-hash "$hash"
         else
+            if test -z "$pass"; set pass $TGT_PASSWORD; end
             if test -z "$pass"; set pass $TGT_CRED_PASSWORD; end
             if test -n "$pass"
                 # smbclient prefers being prompted or using credentials file, 
                 # but we can try passing it if needed. 
             end
         end
+    end
+
+    echo "[*] Connecting to //$target/$share via SMB..."
+    command smbclient $smb_args
+end
+   end
     end
 
     echo "[*] Connecting to //$target/$share via SMB..."

@@ -22,7 +22,6 @@ function __kronos_spray --description "Password spray using nxc smb"
     if test -z "$target"; set target $TGT_DC_IP; end
     if test -z "$target"; set target $TGT_DC; end
     if test -z "$target"; set target $TGT; end
-    
     if test -z "$target"
         echo "error: target is required" >&2
         return 1

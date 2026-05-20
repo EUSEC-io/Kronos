@@ -111,7 +111,7 @@ Automate common enumeration and manipulation tasks:
 
 ### Ticketing & Kerberos
 - `request`: Wrapper for `getTGT` / `getST`. **Auto-exports** `KRB5CCNAME` context.
-- `ticket [golden|silver|diamond|sapphire]`:
+- `ticket [golden|silver|diamond|sapphire|trust|cross-forest]`:
   - Run with flags for direct forging.
   - Run without flags for a **Guided Wizard** that pre-fills your cached values.
 - `convert`: Seamlessly convert between `.kirbi` and `.ccache` formats.

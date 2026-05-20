@@ -21,6 +21,7 @@ function __kronos_secretsdump --description "Dump AD secrets using secretsdump.p
     set -l target $argv[1]
     if test -z "$target"; set target $TGT_DC_IP; end
     if test -z "$target"; set target $TGT_DC; end
+    if test -z "$target"; set target $TGT; end
     if test -z "$target"
         echo "error: target is required" >&2
         return 1
@@ -55,8 +56,12 @@ function __kronos_secretsdump --description "Dump AD secrets using secretsdump.p
     else if set -q _flag_hash
         set -a dump_args -hashes "$_flag_hash" "$domain/$TGT_CRED_USERNAME@$target"
     else
-        set -l user $_flag_username; if test -z "$user"; set user $TGT_CRED_USERNAME; end
-        set -l pass $_flag_password; if test -z "$pass"; set pass $TGT_CRED_PASSWORD; end
+        set -l user $_flag_username; if test -z "$user"; set user $TGT_USERNAME; end
+        if test -z "$user"; set user $TGT_CRED_USERNAME; end
+
+        set -l pass $_flag_password; if test -z "$pass"; set pass $TGT_PASSWORD; end
+        if test -z "$pass"; set pass $TGT_CRED_PASSWORD; end
+
         if test -z "$user"; or test -z "$pass"
              echo "error: credentials required" >&2
              return 1

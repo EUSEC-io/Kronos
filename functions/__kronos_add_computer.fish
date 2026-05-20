@@ -22,6 +22,7 @@ function __kronos_add_computer --description "Create a new AD computer account u
     set -l target $argv[1]
     if test -z "$target"; set target $TGT_DC_IP; end
     if test -z "$target"; set target $TGT_DC; end
+    if test -z "$target"; set target $TGT; end
     if test -z "$target"
         echo "error: target is required" >&2
         return 1
@@ -57,8 +58,12 @@ function __kronos_add_computer --description "Create a new AD computer account u
     if set -q _flag_kerberos
         set -a add_args -k -no-pass "$domain/$TGT_CRED_USERNAME"
     else
-        set -l auth_user $_flag_username; if test -z "$auth_user"; set auth_user $TGT_CRED_USERNAME; end
-        set -l auth_pass $_flag_password; if test -z "$auth_pass"; set auth_pass $TGT_CRED_PASSWORD; end
+        set -l auth_user $_flag_username; if test -z "$auth_user"; set auth_user $TGT_USERNAME; end
+        if test -z "$auth_user"; set auth_user $TGT_CRED_USERNAME; end
+
+        set -l auth_pass $_flag_password; if test -z "$auth_pass"; set auth_pass $TGT_PASSWORD; end
+        if test -z "$auth_pass"; set auth_pass $TGT_CRED_PASSWORD; end
+
         if set -q _flag_hash
             set -a add_args -hashes "$_flag_hash" "$domain/$auth_user"
         else

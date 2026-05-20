@@ -39,10 +39,10 @@ function __kronos_kerbroast --description "Run Kerberoasting using GetUserSPNs.p
         return 1
     end
 
-    set -l user $_flag_username
+    set -l user $_flag_username; if test -z "$user"; set user $TGT_USERNAME; end
     if test -z "$user"; set user $TGT_CRED_USERNAME; end
     
-    set -l pass $_flag_password
+    set -l pass $_flag_password; if test -z "$pass"; set pass $TGT_PASSWORD; end
     if test -z "$pass"; set pass $TGT_CRED_PASSWORD; end
 
     set -l impacket_cmd ""

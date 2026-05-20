@@ -40,10 +40,10 @@ function __kronos_lookupsid --description "Enumerate SIDs for AD objects using l
         return 1
     end
 
-    set -l user $_flag_username
+    set -l user $_flag_username; if test -z "$user"; set user $TGT_USERNAME; end
     if test -z "$user"; set user $TGT_CRED_USERNAME; end
     
-    set -l pass $_flag_password
+    set -l pass $_flag_password; if test -z "$pass"; set pass $TGT_PASSWORD; end
     if test -z "$pass"; set pass $TGT_CRED_PASSWORD; end
 
     set -l impacket_cmd ""

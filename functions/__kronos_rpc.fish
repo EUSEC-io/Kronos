@@ -29,6 +29,8 @@ function __kronos_rpc --description "Connect to target using rpcclient (RPC)"
         set_color cyan; echo "[*] Starting RPC connection wizard..."; set_color normal
         
         set -l def_target "$__KRONOS_CACHE_RPC_TARGET"
+        if test -z "$def_target"; set def_target $TGT_DC_IP; end
+        if test -z "$def_target"; set def_target $TGT_DC; end
         if test -z "$def_target"; set def_target "$TGT"; end
         if test -n "$target"; set def_target "$target"; end
         set target (__kronos_ask "Target IP/Hostname" "$def_target"); or return 1
@@ -36,7 +38,8 @@ function __kronos_rpc --description "Connect to target using rpcclient (RPC)"
 
         if not set -q _flag_null; and not set -q _flag_kerberos
             set -l def_user "$__KRONOS_CACHE_RPC_USER"
-            if test -z "$def_user"; set def_user "$TGT_CRED_USERNAME"; end
+            if test -z "$def_user"; set def_user $TGT_USERNAME; end
+            if test -z "$def_user"; set_l def_user "$TGT_CRED_USERNAME"; end
             if test -n "$user"; set def_user "$user"; end
             set user (__kronos_ask "Username" "$def_user"); or return 1
             set -U __KRONOS_CACHE_RPC_USER "$user"
@@ -48,6 +51,7 @@ function __kronos_rpc --description "Connect to target using rpcclient (RPC)"
             set -U __KRONOS_CACHE_RPC_DOMAIN "$domain"
 
             set -l def_auth_val "$__KRONOS_CACHE_RPC_AUTH_VAL"
+            if test -z "$def_auth_val"; set def_auth_val $TGT_PASSWORD; end
             if test -z "$def_auth_val"; set def_auth_val "$TGT_CRED_PASSWORD"; end
             if test -n "$pass"; set def_auth_val "$pass"; end
             if test -n "$hash"; set def_auth_val "$hash"; end
@@ -62,8 +66,13 @@ function __kronos_rpc --description "Connect to target using rpcclient (RPC)"
         end
     else
         # Standard Fallbacks
+        if test -z "$target"; set target $TGT_DC_IP; end
+        if test -z "$target"; set target $TGT_DC; end
         if test -z "$target"; set target $TGT; end
+        
+        if test -z "$user"; set user $TGT_USERNAME; end
         if test -z "$user"; set user $TGT_CRED_USERNAME; end
+        
         if test -z "$domain"; set domain $TGT_DC_DOMAIN; end
     end
 

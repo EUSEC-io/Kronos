@@ -35,10 +35,10 @@ function __kronos_request --description "Request TGT or ST and export KRB5CCNAME
         return 1
     end
 
-    set -l user $_flag_username
+    set -l user $_flag_username; if test -z "$user"; set user $TGT_USERNAME; end
     if test -z "$user"; set user $TGT_CRED_USERNAME; end
     
-    set -l pass $_flag_password
+    set -l pass $_flag_password; if test -z "$pass"; set pass $TGT_PASSWORD; end
     if test -z "$pass"; set pass $TGT_CRED_PASSWORD; end
 
     set -l req_args

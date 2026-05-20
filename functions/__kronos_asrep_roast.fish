@@ -36,7 +36,7 @@ function __kronos_asrep_roast --description "Run AS-REP Roasting using GetNPUser
         return 1
     end
 
-    set -l user $_flag_username
+    set -l user $_flag_username; if test -z "$user"; set user $TGT_USERNAME; end
     if test -z "$user"; set user $TGT_CRED_USERNAME; end
     if test -z "$user"
         echo "error: username is required" >&2
