@@ -42,32 +42,28 @@ function __kronos_mssql --description "Connect to target using mssqlclient.py (M
     end
 
     set -l mssql_args
-    if test -n "$TGT_DC_IP"
-        set -a mssql_args -dc-ip "$TGT_DC_IP"
-    else if test -n "$TGT_DC"
-        set -a mssql_args -dc-ip "$TGT_DC"
-    end
-
     if set -q _flag_kerberos
-        set -a mssql_args -k -no-pass
-        
-        # For Kerberos, Impacket can often derive the user from the ccache.
-        # Providing just the target is often cleaner for service tickets.
-        if test -n "$user"; and test -n "$domain"
-            set -a mssql_args "$domain/$user@$target"
-        else
-            set -a mssql_args "$target"
-        end
-    else if set -q _flag_hash
-        set -a mssql_args -hashes "$_flag_hash" "$domain/$user@$target"
+        # Minimalist command for Kerberos (prefer just the target)
+        set -a mssql_args -k -no-pass "$target"
     else
-        set -l pass $_flag_password
-        if test -z "$pass"; set pass $TGT_CRED_PASSWORD; end
-        if test -z "$user"; or test -z "$pass"
-             echo "error: credentials or kerberos flag required" >&2
-             return 1
+        # Add DC-IP for credentialed/hash authentication to aid realm/domain resolution
+        if test -n "$TGT_DC_IP"
+            set -a mssql_args -dc-ip "$TGT_DC_IP"
+        else if test -n "$TGT_DC"
+            set -a mssql_args -dc-ip "$TGT_DC"
         end
-        set -a mssql_args "$domain/$user:$pass@$target"
+
+        if set -q _flag_hash
+            set -a mssql_args -hashes "$_flag_hash" "$domain/$user@$target"
+        else
+            set -l pass $_flag_password
+            if test -z "$pass"; set pass $TGT_CRED_PASSWORD; end
+            if test -z "$user"; or test -z "$pass"
+                 echo "error: credentials or kerberos flag required" >&2
+                 return 1
+            end
+            set -a mssql_args "$domain/$user:$pass@$target"
+        end
     end
 
     echo "[*] Connecting to $target via MSSQL ($impacket_cmd)..."
