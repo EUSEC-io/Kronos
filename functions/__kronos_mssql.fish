@@ -42,18 +42,22 @@ function __kronos_mssql --description "Connect to target using mssqlclient.py (M
     end
 
     set -l mssql_args
+    if test -n "$TGT_DC_IP"
+        set -a mssql_args -dc-ip "$TGT_DC_IP"
+    else if test -n "$TGT_DC"
+        set -a mssql_args -dc-ip "$TGT_DC"
+    end
+
     if set -q _flag_kerberos
         set -a mssql_args -k -no-pass
         
-        # Kerberos often requires the FQDN in the target string to resolve the SPN.
-        # Use TGT_DC_HOST if available, and provide the IP via -dc-ip.
-        set -l connect_target $target
-        if test -n "$TGT_DC_HOST"
-            set connect_target $TGT_DC_HOST
-            set -a mssql_args -dc-ip "$target"
+        # For Kerberos, Impacket can often derive the user from the ccache.
+        # Providing just the target is often cleaner for service tickets.
+        if test -n "$user"; and test -n "$domain"
+            set -a mssql_args "$domain/$user@$target"
+        else
+            set -a mssql_args "$target"
         end
-        
-        set -a mssql_args "$domain/$user@$connect_target"
     else if set -q _flag_hash
         set -a mssql_args -hashes "$_flag_hash" "$domain/$user@$target"
     else
