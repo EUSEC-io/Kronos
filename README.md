@@ -27,7 +27,7 @@
 - 🚀 **Unified Workflow**: One command to rule them all. No more remembering complex flag syntax for 10+ different tools.
 - 🧙 **Interactive Wizards**: Guided prompts for complex attacks (Golden/Silver/Diamond/Sapphire tickets).
 - 🧠 **Smart Persistence**: Remembers your previous inputs (SIDs, Hashes, IPs) to save you from repetitive copy-pasting.
-- 🎯 **Deep Context**: Seamlessly pulls targets and credentials from the **[tgt](https://github.com/fuxx/tgt)** framework.
+- 🎯 **Deep Context**: Seamlessly pulls targets and credentials from the **[tgt](https://github.com/EUSEC-io/tgt)** framework.
 - ⚡ **Auto-Loading**: Native Fish completions and functions for a fluid CLI experience.
 
 ---
@@ -71,7 +71,7 @@ kronos install
 ---
 
 ## 🎯 Deep TGT Integration
-Kronos is built to be used alongside **[tgt](https://github.com/fuxx/tgt)**. It automatically monitors your environment for the following variables:
+Kronos is built to be used alongside **[tgt](https://github.com/EUSEC-io/tgt)**. It automatically monitors your environment for the following variables:
 
 | Variable | Usage |
 | :--- | :--- |
