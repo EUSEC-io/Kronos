@@ -55,5 +55,5 @@ function __kronos_help --description "Global help for Kronos"
     echo "  install     Install all external dependencies"
     echo "  help        Show this global help message"
     echo ""
-    echo "Run 'kronos <command> help' or 'kronos help <command>' for more info."
+    echo "Run 'kronos <command> help' for subcommand-specific details."
 end

@@ -1,6 +1,6 @@
 # description: Create a new AD computer account using addcomputer.py
 function __kronos_add_computer --description "Create a new AD computer account using addcomputer.py"
-    argparse h/help q/quiet u/username= p/password= H/hash= k/kerberos C/computer= P/computer-pass= w/wizard -- $argv
+    argparse h/help u/username= p/password= H/hash= k/kerberos C/computer= P/computer-pass= q/quiet w/wizard -- $argv
     or return 1
 
     if set -q _flag_help
@@ -25,49 +25,58 @@ function __kronos_add_computer --description "Create a new AD computer account u
     set -l computer_pass $_flag_computer_pass
     set -l auth_user $_flag_username
     set -l auth_pass $_flag_password
+    set -l auth_hash $_flag_hash
 
-    # Standard Fallbacks & Cache
+    # Load defaults
     if test -z "$target"
-        set target $__KRONOS_CACHE_ADDCOMPUTER_TARGET
+        set target $__KRONOS_CACHE_ADDCOMP_TARGET
         if test -z "$target"; set target $TGT_DC_IP; end
         if test -z "$target"; set target $TGT_DC; end
         if test -z "$target"; set target $TGT; end
     end
-
-    if test -z "$computer"; set computer $__KRONOS_CACHE_ADDCOMPUTER_NAME; end
-    if test -z "$computer_pass"; set computer_pass $__KRONOS_CACHE_ADDCOMPUTER_PASS; end
-
+    if test -z "$computer"; set computer $__KRONOS_CACHE_ADDCOMP_NAME; end
+    if test -z "$computer_pass"; set computer_pass $__KRONOS_CACHE_ADDCOMP_PASS; end
     if test -z "$auth_user"
-        set auth_user $__KRONOS_CACHE_ADDCOMPUTER_AUTH_USER
+        set auth_user $__KRONOS_CACHE_ADDCOMP_AUTH_USER
         if test -z "$auth_user"; set auth_user $TGT_USERNAME; end
         if test -z "$auth_user"; set auth_user $TGT_CRED_USERNAME; end
     end
-    if test -z "$auth_pass"
-        set auth_pass $__KRONOS_CACHE_ADDCOMPUTER_AUTH_PASS
-        if test -z "$auth_pass"; set auth_pass $TGT_PASSWORD; end
-        if test -z "$auth_pass"; set auth_pass $TGT_CRED_PASSWORD; end
+    if test -z "$auth_pass"; and test -z "$auth_hash"
+        set -l cached_auth "$__KRONOS_CACHE_ADDCOMP_AUTH_VAL"
+        if string match -rq '^[a-fA-F0-9]{32}:[a-fA-F0-9]{32}$|^[a-fA-F0-9]{32}$' -- "$cached_auth"
+            set auth_hash "$cached_auth"
+        else
+            set auth_pass "$cached_auth"
+        end
+        if test -z "$auth_pass"; and test -z "$auth_hash"; set auth_pass $TGT_PASSWORD; end
+        if test -z "$auth_pass"; and test -z "$auth_hash"; set auth_pass $TGT_CRED_PASSWORD; end
     end
 
-    # Interactive Wizard/Prompts
     if not set -q _flag_quiet
-        if test -z "$target"; or test -z "$computer"; or set -q _flag_wizard
-            set_color cyan; echo "[*] Starting Add Computer wizard..."; set_color normal
+        set_color cyan; echo "[*] Starting Add Computer wizard..."; set_color normal
+
+        set target (__kronos_ask "Target DC IP/Hostname" "$target"); or return 1
+        set -U __KRONOS_CACHE_ADDCOMP_TARGET "$target"
+
+        set computer (__kronos_ask "Computer Name" "$computer"); or return 1
+        set -U __KRONOS_CACHE_ADDCOMP_NAME "$computer"
+
+        set computer_pass (__kronos_ask "Computer Password (optional)" "$computer_pass")
+        set -U __KRONOS_CACHE_ADDCOMP_PASS "$computer_pass"
+
+        if not set -q _flag_kerberos
+            set auth_user (__kronos_ask "Auth Username" "$auth_user"); or return 1
+            set -U __KRONOS_CACHE_ADDCOMP_AUTH_USER "$auth_user"
+
+            set -l def_auth_val "$auth_pass"
+            if test -n "$auth_hash"; set def_auth_val "$auth_hash"; end
+            set -l auth_input (__kronos_ask "Auth Password or Hash" "$def_auth_val"); or return 1
+            set -U __KRONOS_CACHE_ADDCOMP_AUTH_VAL "$auth_input"
             
-            set target (__kronos_ask "Target DC IP/Hostname" "$target"); or return 1
-            set -U __KRONOS_CACHE_ADDCOMPUTER_TARGET "$target"
-
-            set computer (__kronos_ask "New Computer Name" "$computer"); or return 1
-            set -U __KRONOS_CACHE_ADDCOMPUTER_NAME "$computer"
-
-            set computer_pass (__kronos_ask "New Computer Password" "$computer_pass"); or return 1
-            set -U __KRONOS_CACHE_ADDCOMPUTER_PASS "$computer_pass"
-
-            if not set -q _flag_kerberos
-                set auth_user (__kronos_ask "Auth Username" "$auth_user"); or return 1
-                set -U __KRONOS_CACHE_ADDCOMPUTER_AUTH_USER "$auth_user"
-
-                set auth_pass (__kronos_ask "Auth Password" "$auth_pass"); or return 1
-                set -U __KRONOS_CACHE_ADDCOMPUTER_AUTH_PASS "$auth_pass"
+            if string match -rq '^[a-fA-F0-9]{32}:[a-fA-F0-9]{32}$|^[a-fA-F0-9]{32}$' -- "$auth_input"
+                set auth_hash "$auth_input"; set auth_pass ""
+            else
+                set auth_pass "$auth_input"; set auth_hash ""
             end
         end
 
@@ -78,15 +87,14 @@ function __kronos_add_computer --description "Create a new AD computer account u
         echo "  Computer: $computer"
         echo "  Auth:     "(set -q _flag_kerberos; and echo "Kerberos"; or echo "$auth_user")
         echo ""
-        if test (__kronos_ask_confirm "Create computer account $computer?" n) != "yes"
+        if test (__kronos_ask_confirm "Create computer account '$computer' on $target?" n) != "yes"
             echo "Aborted."
             return 1
         end
     end
 
-    # Validation
-    if test -z "$target"; echo "error: target is required" >&2; return 1; end
-    if test -z "$computer"; echo "error: --computer name is required" >&2; return 1; end
+    if test -z "$target"; echo "error: target is required"; return 1; end
+    if test -z "$computer"; echo "error: computer name is required"; return 1; end
 
     set -l domain $TGT_DC_DOMAIN
     if test -z "$domain"
@@ -95,30 +103,18 @@ function __kronos_add_computer --description "Create a new AD computer account u
     end
 
     set -l impacket_cmd ""
-    if command -v addcomputer.py >/dev/null
-        set impacket_cmd addcomputer.py
-    else if command -v impacket-addcomputer >/dev/null
-        set impacket_cmd impacket-addcomputer
-    else
-        echo "error: addcomputer.py not found. run 'kronos install'." >&2
-        return 1
-    end
+    if command -v addcomputer.py >/dev/null; set impacket_cmd addcomputer.py
+    else if command -v impacket-addcomputer >/dev/null; set impacket_cmd impacket-addcomputer
+    else; echo "error: addcomputer.py not found. run 'kronos install'."; return 1; end
 
-    set -l add_args -dc-ip "$target"
-    if test -n "$computer_pass"
-        set -a add_args -computer-pass "$computer_pass"
-    end
-    set -a add_args -computer-name "$computer"
+    set -l add_args -dc-ip "$target" -computer-name "$computer"
+    if test -n "$computer_pass"; set -a add_args -computer-pass "$computer_pass"; end
 
     if set -q _flag_kerberos
-        set -a add_args -k -no-pass "$domain/$TGT_CRED_USERNAME"
+        set -a add_args -k -no-pass "$domain/$auth_user"
     else
-        if test -z "$auth_user"
-            echo "error: auth credentials required" >&2
-            return 1
-        end
-        if set -q _flag_hash
-            set -a add_args -hashes "$_flag_hash" "$domain/$auth_user"
+        if test -n "$auth_hash"
+            set -a add_args -hashes "$auth_hash" "$domain/$auth_user"
         else
             set -a add_args "$domain/$auth_user:$auth_pass"
         end

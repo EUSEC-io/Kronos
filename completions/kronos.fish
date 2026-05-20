@@ -32,7 +32,7 @@ complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a lookupsid -
 complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a install -d "Install all dependencies"
 complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a help -d "Show help menu"
 
-# Connect subcommands
+# Connect subcommands (protocols)
 complete -c kronos -n "__fish_seen_subcommand_from connect; and not __fish_seen_subcommand_from $protocols" -a rdp -d "Connect via RDP (xfreerdp3)"
 complete -c kronos -n "__fish_seen_subcommand_from connect; and not __fish_seen_subcommand_from $protocols" -a winrm -d "Connect via WinRM (evil-winrm)"
 complete -c kronos -n "__fish_seen_subcommand_from connect; and not __fish_seen_subcommand_from $protocols" -a ftp -d "Connect via FTP"
@@ -49,12 +49,12 @@ complete -c kronos -n "__fish_seen_subcommand_from ticket; and not __fish_seen_s
 complete -c kronos -n "__fish_seen_subcommand_from ticket; and not __fish_seen_subcommand_from $ticket_types" -a cross-forest -d "Create Cross-Forest Golden Ticket (interactive wizard)"
 
 # Shared flags
-set -l needs_auth userenum dominfo connect asrep-roast kerbroast forcechange gmsa lookupsid ingest request add-user add-member add-computer dacl search secretsdump rbcd shadow-credentials ticket
+set -l needs_auth dominfo connect asrep-roast kerbroast forcechange gmsa lookupsid ingest request add-user add-member add-computer dacl search secretsdump rbcd shadow-credentials ticket
 complete -c kronos -n "__fish_seen_subcommand_from $needs_auth" -s u -l username -d "Username"
 complete -c kronos -n "__fish_seen_subcommand_from dominfo connect kerbroast forcechange gmsa lookupsid ingest request" -s p -l password -d "Password"
 complete -c kronos -n "__fish_seen_subcommand_from connect kerbroast forcechange gmsa lookupsid request add-computer secretsdump ticket" -s H -l hash -d "NTLM Hash"
 complete -c kronos -n "__fish_seen_subcommand_from dominfo connect asrep-roast kerbroast forcechange gmsa lookupsid ingest add-user add-member add-computer dacl search secretsdump rbcd shadow-credentials" -s k -l kerberos -d "Use Kerberos authentication"
-complete -c kronos -n "__fish_seen_subcommand_from $commands" -s h -l help -d "Show help" 
+complete -c kronos -n "__fish_seen_subcommand_from $commands" -s h -l help -d "Show help"
 complete -c kronos -n "__fish_seen_subcommand_from $commands" -s q -l quiet -d "Skip prompts and use cached values"
 
 # Subcommand-specific flags

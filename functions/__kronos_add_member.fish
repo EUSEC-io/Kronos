@@ -25,17 +25,16 @@ function __kronos_add_member --description "Add a user to an AD group using bloo
     set -l auth_user $_flag_username
     set -l auth_pass $_flag_password
 
-    # Standard Fallbacks & Cache
+    # Load defaults from cache/TGT for prompts
     if test -z "$target"
         set target $__KRONOS_CACHE_ADDMEMBER_TARGET
         if test -z "$target"; set target $TGT_DC_IP; end
         if test -z "$target"; set target $TGT_DC; end
         if test -z "$target"; set target $TGT; end
     end
-
     if test -z "$group"; set group $__KRONOS_CACHE_ADDMEMBER_GROUP; end
+    if test -z "$group"; set group "Domain Admins"; end
     if test -z "$member"; set member $__KRONOS_CACHE_ADDMEMBER_MEMBER; end
-
     if test -z "$auth_user"
         set auth_user $__KRONOS_CACHE_ADDMEMBER_AUTH_USER
         if test -z "$auth_user"; set auth_user $TGT_USERNAME; end
@@ -47,27 +46,25 @@ function __kronos_add_member --description "Add a user to an AD group using bloo
         if test -z "$auth_pass"; set auth_pass $TGT_CRED_PASSWORD; end
     end
 
-    # Interactive Wizard/Prompts
     if not set -q _flag_quiet
-        if test -z "$target"; or test -z "$group"; or test -z "$member"; or set -q _flag_wizard
-            set_color cyan; echo "[*] Starting Add Member wizard..."; set_color normal
-            
-            set target (__kronos_ask "Target DC IP/Hostname" "$target"); or return 1
-            set -U __KRONOS_CACHE_ADDMEMBER_TARGET "$target"
+        # Force prompt always if not quiet
+        set_color cyan; echo "[*] Starting Add Member wizard..."; set_color normal
+        
+        set target (__kronos_ask "Target DC IP/Hostname" "$target"); or return 1
+        set -U __KRONOS_CACHE_ADDMEMBER_TARGET "$target"
 
-            set group (__kronos_ask "Target Group" "$group"); or return 1
-            set -U __KRONOS_CACHE_ADDMEMBER_GROUP "$group"
+        set group (__kronos_ask "Target Group" "$group"); or return 1
+        set -U __KRONOS_CACHE_ADDMEMBER_GROUP "$group"
 
-            set member (__kronos_ask "Member to Add" "$member"); or return 1
-            set -U __KRONOS_CACHE_ADDMEMBER_MEMBER "$member"
+        set member (__kronos_ask "Member to Add" "$member"); or return 1
+        set -U __KRONOS_CACHE_ADDMEMBER_MEMBER "$member"
 
-            if not set -q _flag_kerberos
-                set auth_user (__kronos_ask "Auth Username" "$auth_user"); or return 1
-                set -U __KRONOS_CACHE_ADDMEMBER_AUTH_USER "$auth_user"
+        if not set -q _flag_kerberos
+            set auth_user (__kronos_ask "Auth Username" "$auth_user"); or return 1
+            set -U __KRONOS_CACHE_ADDMEMBER_AUTH_USER "$auth_user"
 
-                set auth_pass (__kronos_ask "Auth Password" "$auth_pass"); or return 1
-                set -U __KRONOS_CACHE_ADDMEMBER_AUTH_PASS "$auth_pass"
-            end
+            set auth_pass (__kronos_ask "Auth Password" "$auth_pass"); or return 1
+            set -U __KRONOS_CACHE_ADDMEMBER_AUTH_PASS "$auth_pass"
         end
 
         # Confirmation
@@ -78,7 +75,7 @@ function __kronos_add_member --description "Add a user to an AD group using bloo
         echo "  Member:   $member"
         echo "  Auth:     "(set -q _flag_kerberos; and echo "Kerberos"; or echo "$auth_user")
         echo ""
-        if test (__kronos_ask_confirm "Add $member to $group?" n) != "yes"
+        if test (__kronos_ask_confirm "Add $member to $group on $target?" n) != "yes"
             echo "Aborted."
             return 1
         end
