@@ -1,6 +1,11 @@
 # description: Ingest Active Directory data using bloodhound-python
 function __kronos_ingest --description "Ingest Active Directory data using bloodhound-python"
-    argparse h/help q/quiet u/username= p/password= o/output= d/domain= k/kerberos w/wizard -- $argv
+    set -l wizard 0
+    if test (count $argv) -eq 0
+        set wizard 1
+    end
+
+    argparse h/help q/quiet u/username= p/password= H/hash= o/output= d/domain= k/kerberos w/wizard -- $argv
     or return 1
 
     if set -q _flag_help
@@ -11,10 +16,11 @@ function __kronos_ingest --description "Ingest Active Directory data using blood
         echo "Options:"
         echo "  -u, --username USER Auth username"
         echo "  -p, --password PASS Auth password"
+        echo "  -H, --hash HASH     Auth NTLM hash"
         echo "  -o, --output FILE   Output zip filename"
         echo "  -d, --domain DOMAIN Target domain"
         echo "  -k, --kerberos      Use Kerberos authentication"
-        echo "  -q, --quiet         Skip prompts and use fallbacks"
+        echo "  -q, --quiet         Skip prompts and use cached/default values"
         echo "  -h, --help          Show this help message"
         return 0
     end
@@ -23,63 +29,82 @@ function __kronos_ingest --description "Ingest Active Directory data using blood
     set -l domain $_flag_domain
     set -l auth_user $_flag_username
     set -l auth_pass $_flag_password
+    set -l auth_hash $_flag_hash
+    set -l outfile $_flag_output
 
-    # Standard Fallbacks & Cache
+    # Load defaults
     if test -z "$target"
         set target $__KRONOS_CACHE_INGEST_TARGET
         if test -z "$target"; set target $TGT_DC_IP; end
         if test -z "$target"; set target $TGT_DC; end
         if test -z "$target"; set target $TGT; end
     end
-
     if test -z "$domain"
         set domain $__KRONOS_CACHE_INGEST_DOMAIN
         if test -z "$domain"; set domain $TGT_DC_DOMAIN; end
     end
-
     if test -z "$auth_user"
         set auth_user $__KRONOS_CACHE_INGEST_AUTH_USER
         if test -z "$auth_user"; set auth_user $TGT_USERNAME; end
         if test -z "$auth_user"; set auth_user $TGT_CRED_USERNAME; end
     end
-    if test -z "$auth_pass"
-        set auth_pass $__KRONOS_CACHE_INGEST_AUTH_PASS
-        if test -z "$auth_pass"; set auth_pass $TGT_PASSWORD; end
-        if test -z "$auth_pass"; set auth_pass $TGT_CRED_PASSWORD; end
+    if test -z "$auth_pass"; and test -z "$auth_hash"
+        set -l cached_auth "$__KRONOS_CACHE_INGEST_AUTH_VAL"
+        if string match -rq '^[a-fA-F0-9]{32}:[a-fA-F0-9]{32}$|^[a-fA-F0-9]{32}$' -- "$cached_auth"
+            set auth_hash "$cached_auth"
+        else
+            set auth_pass "$cached_auth"
+        end
+        if test -z "$auth_pass"; and test -z "$auth_hash"; set auth_pass $TGT_PASSWORD; end
+        if test -z "$auth_pass"; and test -z "$auth_hash"; set auth_pass $TGT_CRED_PASSWORD; end
     end
 
-    # Interactive Fallback
     if not set -q _flag_quiet
-        if test -z "$target"; or test -z "$domain"; or set -q _flag_wizard
-            set target (__kronos_ask "Target DC IP/Hostname" "$target"); or return 1
-            set -U __KRONOS_CACHE_INGEST_TARGET "$target"
+        set_color cyan; echo "[*] Starting Ingest wizard..."; set_color normal
 
-            set domain (__kronos_ask "Target Domain" "$domain"); or return 1
-            set -U __KRONOS_CACHE_INGEST_DOMAIN "$domain"
-        end
-        if test -z "$auth_user"; and not set -q _flag_kerberos
+        set target (__kronos_ask "Target DC IP/Hostname" "$target"); or return 1
+        set -U __KRONOS_CACHE_INGEST_TARGET "$target"
+
+        set domain (__kronos_ask "Domain FQDN" "$domain"); or return 1
+        set -U __KRONOS_CACHE_INGEST_DOMAIN "$domain"
+
+        if not set -q _flag_kerberos
             set auth_user (__kronos_ask "Auth Username" "$auth_user"); or return 1
             set -U __KRONOS_CACHE_INGEST_AUTH_USER "$auth_user"
+
+            set -l def_auth_val "$auth_pass"
+            if test -n "$auth_hash"; set def_auth_val "$auth_hash"; end
+            set -l auth_input (__kronos_ask "Auth Password or Hash" "$def_auth_val"); or return 1
+            set -U __KRONOS_CACHE_INGEST_AUTH_VAL "$auth_input"
+            if string match -rq '^[a-fA-F0-9]{32}:[a-fA-F0-9]{32}$|^[a-fA-F0-9]{32}$' -- "$auth_input"
+                set auth_hash "$auth_input"; set auth_pass ""
+            else
+                set auth_pass "$auth_input"; set auth_hash ""
+            end
         end
+
+        set -l def_out "$domain-bloodhound.zip"
+        if test -n "$outfile"; set def_out "$outfile"; end
+        set outfile (__kronos_ask "Output Zip Name" "$def_out"); or return 1
     end
 
-    if test -z "$target"; echo "error: target is required" >&2; return 1; end
-    if test -z "$domain"; echo "error: domain is required" >&2; return 1; end
+    if test -z "$target"; echo "error: target is required"; return 1; end
+    if test -z "$domain"; echo "error: domain is required"; return 1; end
+    if test -z "$outfile"; set outfile "$domain-bloodhound.zip"; end
 
     set -l bh_args -d "$domain" -ns "$target" -c All
     if set -q _flag_kerberos
         set -a bh_args -k
     else
         if test -z "$auth_user"
-            echo "error: credentials or kerberos flag required" >&2
-            return 1
+            echo "error: username is required"; return 1
         end
-        set -a bh_args -u "$auth_user" -p "$auth_pass"
-    end
-
-    set -l outfile "$domain-bloodhound.zip"
-    if set -q _flag_output
-        set outfile $_flag_output
+        set -a bh_args -u "$auth_user"
+        if test -n "$auth_hash"
+            set -a bh_args --hashes "$auth_hash"
+        else
+            set -a bh_args -p "$auth_pass"
+        end
     end
 
     __kronos_check_dep bloodhound-python; or return 1
