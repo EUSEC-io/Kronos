@@ -1,6 +1,6 @@
 # completions/kronos.fish
 
-set -l commands userenum dominfo ingest connect asrep-roast kerbroast spray forcechange gmsa ticket convert request lookupsid add-user add-member add-computer dacl search secretsdump psexec rbcd shadow-credentials install help
+set -l commands userenum dominfo ingest connect asrep-roast kerbroast spray forcechange gmsa ticket convert request lookupsid add-user add-member add-computer dacl search secretsdump psexec rbcd shadow-credentials install reset help
 set -l protocols rdp winrm ftp smb rpc mssql
 set -l ticket_types golden silver diamond sapphire trust cross-forest
 
@@ -31,6 +31,7 @@ complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a convert -d 
 complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a request -d "Request TGT/ST (getTGT/getST)"
 complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a lookupsid -d "Enumerate AD SIDs (lookupsid.py)"
 complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a install -d "Install all dependencies"
+complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a reset -d "Clear all persistent cache variables"
 complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a help -d "Show help menu"
 
 # Connect subcommands
@@ -95,3 +96,4 @@ complete -c kronos -n "__fish_seen_subcommand_from lookupsid" -s D -l domain-sid
 complete -c kronos -n "__fish_seen_subcommand_from convert" -s i -l input -r -d "Input ticket"
 complete -c kronos -n "__fish_seen_subcommand_from convert" -s o -l output -r -d "Output ticket"
 complete -c kronos -n "__fish_seen_subcommand_from secretsdump" -s t -l target-user -r -d "Specific user to dump"
+complete -c kronos -n "__fish_seen_subcommand_from reset" -s y -l yes -d "Skip confirmation prompt"

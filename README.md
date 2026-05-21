@@ -112,6 +112,8 @@ Automate common enumeration and manipulation tasks:
 
 ### Ticketing & Kerberos
 - `request`: Wrapper for `getTGT` / `getST`. **Auto-exports** `KRB5CCNAME` context.
+- `install`: Automatically bootstrap all external tool dependencies.
+- `reset`: Clear all persistent cache variables (SIDs, Hashes, etc.).
 - `ticket [golden|silver|diamond|sapphire|trust|cross-forest]`:
   - Run with flags for direct forging.
   - Run without flags for a **Guided Wizard** that pre-fills your cached values.
