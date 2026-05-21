@@ -94,3 +94,4 @@ complete -c kronos -n "__fish_seen_subcommand_from lookupsid" -s f -l filter -r 
 complete -c kronos -n "__fish_seen_subcommand_from lookupsid" -s D -l domain-sid -d "Only show Domain SID"
 complete -c kronos -n "__fish_seen_subcommand_from convert" -s i -l input -r -d "Input ticket"
 complete -c kronos -n "__fish_seen_subcommand_from convert" -s o -l output -r -d "Output ticket"
+complete -c kronos -n "__fish_seen_subcommand_from secretsdump" -s t -l target-user -r -d "Specific user to dump"
