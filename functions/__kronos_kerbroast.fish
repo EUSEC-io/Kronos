@@ -46,7 +46,7 @@ function __kronos_kerbroast --description "Run Kerberoasting using GetUserSPNs.p
         set -l def_domain "$__KRONOS_CACHE_KERBROAST_DOMAIN"
         if test -z "$def_domain"; set def_domain "$TGT_DC_DOMAIN"; end
         if test -n "$domain"; set def_domain "$domain"; end
-        set domain (__kronos_ask "Domain FQDN" "$def_domain"); or return 1
+        set domain (__kronos_ask "Domain Name" "$def_domain"); or return 1
         set -U __KRONOS_CACHE_KERBROAST_DOMAIN "$domain"
 
         set -l roast_all (__kronos_ask_confirm "Kerberoast ALL accounts?" y); or return 1

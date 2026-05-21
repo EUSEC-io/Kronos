@@ -40,7 +40,7 @@ function __kronos_asrep_roast --description "Run AS-REP Roasting using GetNPUser
         set -l def_domain "$__KRONOS_CACHE_ASREP_DOMAIN"
         if test -z "$def_domain"; set def_domain "$TGT_DC_DOMAIN"; end
         if test -n "$domain"; set def_domain "$domain"; end
-        set domain (__kronos_ask "Domain FQDN" "$def_domain"); or return 1
+        set domain (__kronos_ask "Domain Name" "$def_domain"); or return 1
         set -U __KRONOS_CACHE_ASREP_DOMAIN "$domain"
 
         set -l def_user "$__KRONOS_CACHE_ASREP_USER"

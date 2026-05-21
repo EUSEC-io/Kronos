@@ -61,7 +61,7 @@ function __kronos_request --description "Request TGT or ST and export KRB5CCNAME
         set target (__kronos_ask "Target DC IP/Hostname" "$target"); or return 1
         set -U __KRONOS_CACHE_REQUEST_TARGET "$target"
 
-        set domain (__kronos_ask "Domain FQDN" "$domain"); or return 1
+        set domain (__kronos_ask "Domain Name" "$domain"); or return 1
         set -U __KRONOS_CACHE_REQUEST_DOMAIN "$domain"
 
         set user (__kronos_ask "Auth Username" "$user"); or return 1

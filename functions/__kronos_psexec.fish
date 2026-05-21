@@ -18,7 +18,7 @@ function __kronos_psexec --description "Remote command execution via psexec.py"
         echo "  -u, --username USER Auth username"
         echo "  -p, --password PASS Auth password"
         echo "  -H, --hash HASH     Auth NTLM hash"
-        echo "  -d, --domain DOMAIN Target domain FQDN"
+        echo "  -d, --domain DOMAIN Target domain name"
         echo "  -k, --kerberos      Use Kerberos authentication"
         echo "  -q, --quiet         Skip prompts and use cached/default values"
         echo "  -h, --help          Show this help message"
@@ -35,6 +35,7 @@ function __kronos_psexec --description "Remote command execution via psexec.py"
     if test -z "$target"
         set target $__KRONOS_CACHE_PSEXEC_TARGET
         if test -z "$target"; set target $TGT; end
+        if test -z "$target"; set target $TGT_DC_HOST; end
         if test -z "$target"; set target $TGT_DC_IP; end
     end
     if test -z "$domain"
@@ -60,10 +61,10 @@ function __kronos_psexec --description "Remote command execution via psexec.py"
     if not set -q _flag_quiet
         set_color cyan; echo "[*] Starting PsExec wizard..."; set_color normal
 
-        set target (__kronos_ask "Target IP/Hostname" "$target"); or return 1
+        set target (__kronos_ask "Target IP or FQDN" "$target"); or return 1
         set -U __KRONOS_CACHE_PSEXEC_TARGET "$target"
 
-        set domain (__kronos_ask "Domain FQDN" "$domain"); or return 1
+        set domain (__kronos_ask "Domain Name" "$domain"); or return 1
         set -U __KRONOS_CACHE_PSEXEC_DOMAIN "$domain"
 
         set auth_user (__kronos_ask "Auth Username" "$auth_user"); or return 1
@@ -115,22 +116,21 @@ function __kronos_psexec --description "Remote command execution via psexec.py"
     else; echo "error: psexec not found. run 'kronos install'."; return 1; end
 
     set -l psexec_args -no-pass
-    if test -n "$TGT_DC_IP"; set -a psexec_args -dc-ip "$TGT_DC_IP"
-    else if test -n "$TGT_DC"; set -a psexec_args -dc-ip "$TGT_DC"; end
-
-    set -l connect_target "$target"
-    # If using Kerberos, prefer DC Host for resolution if known
-    if set -q _flag_kerberos; and test -n "$TGT_DC_HOST"
-        set connect_target "$TGT_DC_HOST"
-    end
 
     if set -q _flag_kerberos
-        set -a psexec_args -k "$domain/$auth_user@$connect_target"
-    else if test -n "$auth_hash"
-        set -a psexec_args -hashes "$auth_hash" "$domain/$auth_user@$target"
+        # Kerberos mode: avoid dc-ip to prevent realm resolution issues if DNS/TGT context is mixed
+        set -a psexec_args -k "$domain/$auth_user@$target"
     else
-        if test -z "$auth_pass"; echo "error: password or hash required"; return 1; end
-        set -a psexec_args "$domain/$auth_user:$auth_pass@$target"
+        # Credentialed mode: dc-ip is helpful
+        if test -n "$TGT_DC_IP"; set -a psexec_args -dc-ip "$TGT_DC_IP"
+        else if test -n "$TGT_DC"; set -a psexec_args -dc-ip "$TGT_DC"; end
+
+        if test -n "$auth_hash"
+            set -a psexec_args -hashes "$auth_hash" "$domain/$auth_user@$target"
+        else
+            if test -z "$auth_pass"; echo "error: password or hash required"; return 1; end
+            set -a psexec_args "$domain/$auth_user:$auth_pass@$target"
+        end
     end
 
     __kronos_check_dep $impacket_cmd; or return 1

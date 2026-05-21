@@ -65,7 +65,7 @@ function __kronos_ingest --description "Ingest Active Directory data using blood
         set target (__kronos_ask "Target DC IP/Hostname" "$target"); or return 1
         set -U __KRONOS_CACHE_INGEST_TARGET "$target"
 
-        set domain (__kronos_ask "Domain FQDN" "$domain"); or return 1
+        set domain (__kronos_ask "Domain Name" "$domain"); or return 1
         set -U __KRONOS_CACHE_INGEST_DOMAIN "$domain"
 
         if not set -q _flag_kerberos

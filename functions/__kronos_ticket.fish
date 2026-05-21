@@ -92,11 +92,11 @@ function __kronos_ticket --description "Create advanced AD tickets using tickete
         set sid (__kronos_ask "Domain SID" "$def_sid"); or return 1
         set -U __KRONOS_CACHE_SID "$sid"
 
-        # 4. Domain FQDN
+        # 4. Domain Name
         set -l def_domain "$__KRONOS_CACHE_DOMAIN"
         if test -z "$def_domain"; set def_domain "$TGT_DC_DOMAIN"; end
         if test -n "$domain"; set def_domain "$domain"; end
-        set domain (__kronos_ask "Domain FQDN" "$def_domain"); or return 1
+        set domain (__kronos_ask "Domain Name" "$def_domain"); or return 1
         set -U __KRONOS_CACHE_DOMAIN "$domain"
 
         # 5. User to impersonate
