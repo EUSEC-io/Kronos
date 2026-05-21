@@ -70,6 +70,13 @@ function __kronos_psexec --description "Remote command execution via psexec.py"
         set -U __KRONOS_CACHE_PSEXEC_AUTH_USER "$auth_user"
 
         if not set -q _flag_kerberos
+            set -l use_krb (__kronos_ask_confirm "Use Kerberos authentication?" n); or return 1
+            if test "$use_krb" = "yes"
+                set _flag_kerberos 1
+            end
+        end
+
+        if not set -q _flag_kerberos
             set -l def_auth_val "$auth_pass"
             if test -n "$auth_hash"; set def_auth_val "$auth_hash"; end
             set -l auth_input (__kronos_ask "Auth Password or Hash" "$def_auth_val"); or return 1
@@ -107,12 +114,18 @@ function __kronos_psexec --description "Remote command execution via psexec.py"
     else if command -v impacket-psexec >/dev/null; set impacket_cmd impacket-psexec
     else; echo "error: psexec not found. run 'kronos install'."; return 1; end
 
-    set -l psexec_args
+    set -l psexec_args -no-pass
     if test -n "$TGT_DC_IP"; set -a psexec_args -dc-ip "$TGT_DC_IP"
     else if test -n "$TGT_DC"; set -a psexec_args -dc-ip "$TGT_DC"; end
 
+    set -l connect_target "$target"
+    # If using Kerberos, prefer DC Host for resolution if known
+    if set -q _flag_kerberos; and test -n "$TGT_DC_HOST"
+        set connect_target "$TGT_DC_HOST"
+    end
+
     if set -q _flag_kerberos
-        set -a psexec_args -k -no-pass "$domain/$auth_user@$target"
+        set -a psexec_args -k "$domain/$auth_user@$connect_target"
     else if test -n "$auth_hash"
         set -a psexec_args -hashes "$auth_hash" "$domain/$auth_user@$target"
     else
