@@ -107,6 +107,7 @@ Automate common enumeration and manipulation tasks:
 - `search`: Search AD objects and fetch specific attributes.
 - `dacl`: Full ACE manipulation (Add/Remove permissions like DCSync).
 - `secretsdump`: Dump hashes, LSA secrets, and NTDS.dit.
+- `psexec`: Remote command execution via `psexec.py`.
 - `rbcd` / `shadow-credentials`: Modern AD escalation primitives.
 
 ### Ticketing & Kerberos
