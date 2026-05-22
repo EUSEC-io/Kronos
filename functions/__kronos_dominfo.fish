@@ -23,8 +23,10 @@ function __kronos_dominfo --description "Query domain info and password policy"
     set -l target $argv[1]
     set -l auth_user $_flag_username
     set -l auth_pass $_flag_password
+    set -l pass_pol 0
+    if set -q _flag_pass_policy; set pass_pol 1; end
 
-    # Standard Fallbacks & Cache
+    # Load defaults
     if test -z "$target"
         set target $__KRONOS_CACHE_DOMINFO_TARGET
         if test -z "$target"; set target $TGT_DC_IP; end
@@ -43,26 +45,52 @@ function __kronos_dominfo --description "Query domain info and password policy"
         if test -z "$auth_pass"; set auth_pass $TGT_CRED_PASSWORD; end
     end
 
-    # Interactive Fallback
+    # Interactive Wizard
     if not set -q _flag_quiet
-        if test -z "$target"; or set -q _flag_wizard
+        if test (count $argv) -eq 0; or set -q _flag_wizard
+            set_color cyan; echo "[*] Starting DomInfo wizard..."; set_color normal
+
             set target (__kronos_ask "Target DC IP/Hostname" "$target"); or return 1
             set -U __KRONOS_CACHE_DOMINFO_TARGET "$target"
+
+            set -l mode "NULL Session"
+            if set -q _flag_kerberos; set mode "Kerberos"; end
+            if test -n "$auth_user"; and test -n "$auth_pass"; set mode "Credentials"; end
+            
+            set mode (__kronos_ask_choice "Authentication Mode" "$mode" "NULL Session" "Credentials" "Kerberos"); or return 1
+            
+            if test "$mode" = "Credentials"
+                set auth_user (__kronos_ask "Auth Username" "$auth_user"); or return 1
+                set -U __KRONOS_CACHE_DOMINFO_AUTH_USER "$auth_user"
+                set auth_pass (__kronos_ask "Auth Password" "$auth_pass"); or return 1
+                set -U __KRONOS_CACHE_DOMINFO_AUTH_PASS "$auth_pass"
+                set -e _flag_NULL
+                set -e _flag_kerberos
+            else if test "$mode" = "Kerberos"
+                set auth_user (__kronos_ask "Auth Username" "$auth_user"); or return 1
+                set -U __KRONOS_CACHE_DOMINFO_AUTH_USER "$auth_user"
+                set _flag_kerberos 1
+                set -e _flag_NULL
+            else
+                set _flag_NULL 1
+                set -e _flag_kerberos
+            end
+
+            set -l pol_choice (__kronos_ask_confirm "Query password policy?" (test "$pass_pol" -eq 1; and echo "y"; or echo "n")); or return 1
+            if test "$pol_choice" = "yes"
+                set pass_pol 1
+            else
+                set pass_pol 0
+            end
         end
     end
 
     if test -z "$target"; echo "error: target is required" >&2; return 1; end
 
     set -l has_creds 0
-    if test -n "$auth_user"; and test -n "$auth_pass"
-        set has_creds 1
-    end
-    if set -q _flag_kerberos
-        set has_creds 1
-    end
-    if set -q _flag_NULL
-        set has_creds 0
-    end
+    if test -n "$auth_user"; and test -n "$auth_pass"; set has_creds 1; end
+    if set -q _flag_kerberos; set has_creds 1; end
+    if set -q _flag_NULL; set has_creds 0; end
 
     if test "$has_creds" -eq 1
         __kronos_check_dep nxc; or return 1
@@ -75,7 +103,7 @@ function __kronos_dominfo --description "Query domain info and password policy"
             set nxc_cmd "$nxc_cmd -u \"$auth_user\" -p \"$auth_pass\""
         end
 
-        if set -q _flag_pass_policy
+        if test "$pass_pol" -eq 1
             set nxc_cmd "$nxc_cmd --pass-pol"
         end
         
@@ -88,7 +116,7 @@ function __kronos_dominfo --description "Query domain info and password policy"
     else
         __kronos_check_dep rpcclient; or return 1
         set -l rpc_cmds "querydominfo"
-        if set -q _flag_pass_policy
+        if test "$pass_pol" -eq 1
             set rpc_cmds "$rpc_cmds; getdompwinfo"
         end
         
