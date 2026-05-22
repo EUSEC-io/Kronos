@@ -28,6 +28,7 @@ function __kronos_search --description "Search and enumerate AD objects using bl
     # Standard Fallbacks & Cache
     if test -z "$target"
         set target $__KRONOS_CACHE_SEARCH_TARGET
+        if test -z "$target"; set target $TGT_HOSTS[1]; end
         if test -z "$target"; set target $TGT_DC_IP; end
         if test -z "$target"; set target $TGT_DC; end
         if test -z "$target"; set target $TGT; end

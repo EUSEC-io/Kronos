@@ -42,8 +42,11 @@ function __kronos_kerberoast --description "Run Kerberoasting using GetUserSPNs.
             set -l def_target "$__KRONOS_CACHE_KERBEROAST_TARGET"
             set -l src_target "Cache"
             if test -z "$def_target"
-                set def_target "$TGT_DC_IP"; set src_target "TGT_DC_IP"
+                set def_target "$TGT_HOSTS[1]"; set src_target "TGT_HOSTS"
+                if test -z "$def_target"; set def_target "$TGT_HOSTS[1]"; set src_target "TGT_HOSTS"; if test -z "$def_target"; set def_target "$TGT_DC_IP"; set src_target "TGT_DC_IP"; end; end
                 if test -z "$def_target"; set def_target "$TGT_DC"; set src_target "TGT_DC"; end
+                if test -z "$def_target"; set def_target "$TGT"; set src_target "TGT"; end
+            end
                 if test -z "$def_target"; set def_target "$TGT"; set src_target "TGT"; end
             end
             if test -n "$target"; set def_target "$target"; set src_target "CLI Arg"; end
@@ -62,8 +65,12 @@ function __kronos_kerberoast --description "Run Kerberoasting using GetUserSPNs.
             set -l roast_all (__kronos_ask_confirm "Kerberoast ALL accounts?" y); or return 1
             if test "$roast_all" = "no"
                 set -l def_target_user "$__KRONOS_CACHE_KERBEROAST_TARGET_USER"
-                if test -n "$target_user"; set def_target_user "$target_user"; end
-                set target_user (__kronos_ask "Specific user to roast" "$def_target_user"); or return 1
+            set -l src_target_user "Cache"
+            if test -z "$def_target_user"
+                
+            end
+            if test -n "$target_user"; set def_target_user "$target_user"; set src_target_user "CLI Arg"; end
+                set target_user (__kronos_ask "Specific user to roast" "$def_target_user" "$src_target_user"); or return 1
                 set -U __KRONOS_CACHE_KERBEROAST_TARGET_USER "$target_user"
             else
                 set target_user ""
@@ -99,6 +106,7 @@ function __kronos_kerberoast --description "Run Kerberoasting using GetUserSPNs.
     else
         # Quiet mode fallbacks
         if test -z "$target"; set target "$__KRONOS_CACHE_KERBEROAST_TARGET"; end
+        if test -z "$target"; set target $TGT_HOSTS[1]; end
         if test -z "$target"; set target $TGT_DC_IP; end
         if test -z "$target"; set target $TGT_DC; end
         if test -z "$target"; set target $TGT; end

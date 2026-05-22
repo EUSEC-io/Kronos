@@ -64,24 +64,35 @@ function __kronos_ticket --description "Create advanced AD tickets using tickete
             case trust; set hash_label "Trust Account NTLM Hash"
         end
         set -l def_hash "$__KRONOS_CACHE_HASH"
-        if test -z "$def_hash"; set def_hash "$TGT_PASSWORD"; end
-        if test -z "$def_hash"; set def_hash "$TGT_CRED_PASSWORD"; end
-        if test -n "$hash"; set def_hash "$hash"; end
-        set hash (__kronos_ask "$hash_label" "$def_hash"); or return 1
+            set -l src_hash "Cache"
+            if test -z "$def_hash"
+                set def_hash "$TGT_PASSWORD"; set src_hash "TGT_PASSWORD"
+                if test -z "$def_hash"; set def_hash "$TGT_CRED_PASSWORD"; set src_hash "TGT_CRED_PASSWORD"; end
+            end
+            if test -n "$hash"; set def_hash "$hash"; set src_hash "CLI Arg"; end
+        set hash (__kronos_ask "$hash_label" "$def_hash" "$src_hash"); or return 1
         set -U __KRONOS_CACHE_HASH "$hash"
 
         # 2. krbtgt AES256 Key (Golden, Diamond, Sapphire, Cross-Forest)
         if contains -- "$subaction" golden diamond sapphire cross-forest
             set -l def_aes "$__KRONOS_CACHE_AES_KEY"
-            if test -n "$aes_key"; set def_aes "$aes_key"; end
-            set aes_key (__kronos_ask "krbtgt AES256 Key" "$def_aes")
+            set -l src_aes "Cache"
+            if test -z "$def_aes"
+                
+            end
+            if test -n "$aes_key"; set def_aes "$aes_key"; set src_aes "CLI Arg"; end
+            set aes_key (__kronos_ask "krbtgt AES256 Key" "$def_aes" "$src_aes")
             set -U __KRONOS_CACHE_AES_KEY "$aes_key"
         end
 
         # 3. Domain SID
         set -l def_sid "$__KRONOS_CACHE_SID"
-        if test -n "$sid"; set def_sid "$sid"; end
-        set sid (__kronos_ask "Domain SID" "$def_sid"); or return 1
+            set -l src_sid "Cache"
+            if test -z "$def_sid"
+                
+            end
+            if test -n "$sid"; set def_sid "$sid"; set src_sid "CLI Arg"; end
+        set sid (__kronos_ask "Domain SID" "$def_sid" "$src_sid"); or return 1
         set -U __KRONOS_CACHE_SID "$sid"
 
         # 4. Domain Name
@@ -95,26 +106,36 @@ function __kronos_ticket --description "Create advanced AD tickets using tickete
         set -l user_prompt "User to Impersonate"
         if test "$subaction" = "sapphire"; set user_prompt "User to Impersonate (via S4U2Self)"; end
         set -l def_user "$__KRONOS_CACHE_USER"
-        if test -z "$def_user"; set def_user "Administrator"; end
-        if test -n "$user"; set def_user "$user"; end
-        set user (__kronos_ask "$user_prompt" "$def_user"); or return 1
+            set -l src_user "Cache"
+            if test -z "$def_user"
+                
+            end
+            if test -n "$user"; set def_user "$user"; set src_user "CLI Arg"; end
+        set user (__kronos_ask "$user_prompt" "$def_user" "$src_user"); or return 1
         set -U __KRONOS_CACHE_USER "$user"
 
         # 6. Extra SID (Cross-Forest)
         if test "$subaction" = "cross-forest"
             set -l def_extra "$__KRONOS_CACHE_EXTRA_SID"
-            if test -n "$extra_sid"; set def_extra "$extra_sid"; end
-            set extra_sid (__kronos_ask "Extra SID" "$def_extra"); or return 1
+            set -l src_extra "Cache"
+            if test -z "$def_extra"
+                
+            end
+            if test -n "$extra_sid"; set def_extra "$extra_sid"; set src_extra "CLI Arg"; end
+            set extra_sid (__kronos_ask "Extra SID" "$def_extra" "$src_extra"); or return 1
             set -U __KRONOS_CACHE_EXTRA_SID "$extra_sid"
         end
         
         # 7. Low-Priv Auth User & Pass/Hash (Diamond/Sapphire)
         if test "$subaction" = "diamond" -o "$subaction" = "sapphire"
             set -l def_auth_user "$__KRONOS_CACHE_AUTH_USER"
-            if test -z "$def_auth_user"; set def_auth_user "$TGT_USERNAME"; end
-            if test -z "$def_auth_user"; set def_auth_user "$TGT_CRED_USERNAME"; end
-            if test -n "$auth_user"; set def_auth_user "$auth_user"; end
-            set auth_user (__kronos_ask "Low-priv Auth Username" "$def_auth_user"); or return 1
+            set -l src_auth_user "Cache"
+            if test -z "$def_auth_user"
+                set def_auth_user "$TGT_USERNAME"; set src_auth_user "TGT_USERNAME"
+                if test -z "$def_auth_user"; set def_auth_user "$TGT_CRED_USERNAME"; set src_auth_user "TGT_CRED_USERNAME"; end
+            end
+            if test -n "$auth_user"; set def_auth_user "$auth_user"; set src_auth_user "CLI Arg"; end
+            set auth_user (__kronos_ask "Low-priv Auth Username" "$def_auth_user" "$src_auth_user"); or return 1
             set -U __KRONOS_CACHE_AUTH_USER "$auth_user"
 
             set -l def_auth_val "$__KRONOS_CACHE_AUTH_VAL"
@@ -134,15 +155,12 @@ function __kronos_ticket --description "Create advanced AD tickets using tickete
             # 8. User ID (RID)
             set -l rid_label "Target User RID"
             set -l def_user_id "$__KRONOS_CACHE_USER_ID"
-            if test -z "$def_user_id"; set def_user_id "500"; end # Default admin for Diamond
-            
-            if test "$subaction" = "sapphire"
-                set rid_label "Low-priv User RID"
-                set def_user_id "$__KRONOS_CACHE_LOWPRIV_RID"
+            set -l src_user_id "Cache"
+            if test -z "$def_user_id"
+                
             end
-            
-            if test -n "$user_id"; set def_user_id "$user_id"; end
-            set user_id (__kronos_ask "$rid_label" "$def_user_id"); or return 1
+            if test -n "$user_id"; set def_user_id "$user_id"; set src_user_id "CLI Arg"; end
+            set user_id (__kronos_ask "$rid_label" "$def_user_id" "$src_user_id"); or return 1
             
             if test "$subaction" = "sapphire"
                 set -U __KRONOS_CACHE_LOWPRIV_RID "$user_id"
@@ -153,9 +171,12 @@ function __kronos_ticket --description "Create advanced AD tickets using tickete
             # 9. Groups (Diamond)
             if test "$subaction" = "diamond"
                 set -l def_groups "$__KRONOS_CACHE_GROUPS"
-                if test -z "$def_groups"; set def_groups "512,513,518,519,520"; end
-                if test -n "$groups"; set def_groups "$groups"; end
-                set groups (__kronos_ask "Group RIDs (comma-separated)" "$def_groups"); or return 1
+            set -l src_groups "Cache"
+            if test -z "$def_groups"
+                
+            end
+            if test -n "$groups"; set def_groups "$groups"; set src_groups "CLI Arg"; end
+                set groups (__kronos_ask "Group RIDs (comma-separated)" "$def_groups" "$src_groups"); or return 1
                 set -U __KRONOS_CACHE_GROUPS "$groups"
             end
         end
@@ -163,11 +184,12 @@ function __kronos_ticket --description "Create advanced AD tickets using tickete
         # 10. SPN (Silver/Trust)
         if test "$subaction" = "silver" -o "$subaction" = "trust"
             set -l def_spn "$__KRONOS_CACHE_SPN"
-            if test "$subaction" = "trust" -a -z "$def_spn"
-                set def_spn "krbtgt/PARENT.DOMAIN"
+            set -l src_spn "Cache"
+            if test -z "$def_spn"
+                
             end
-            if test -n "$spn"; set def_spn "$spn"; end
-            set spn (__kronos_ask "Target SPN" "$def_spn"); or return 1
+            if test -n "$spn"; set def_spn "$spn"; set src_spn "CLI Arg"; end
+            set spn (__kronos_ask "Target SPN" "$def_spn" "$src_spn"); or return 1
             set -U __KRONOS_CACHE_SPN "$spn"
         end
     else

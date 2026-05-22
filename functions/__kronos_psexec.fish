@@ -37,6 +37,7 @@ function __kronos_psexec --description "Remote command execution via psexec.py"
         set target $__KRONOS_CACHE_PSEXEC_TARGET
         if test -z "$target"; set target $TGT; end
         if test -z "$target"; set target $TGT_DC_HOST; end
+        if test -z "$target"; set target $TGT_HOSTS[1]; end
         if test -z "$target"; set target $TGT_DC_IP; end
     end
     if test -z "$domain"
@@ -62,7 +63,7 @@ function __kronos_psexec --description "Remote command execution via psexec.py"
     if not set -q _flag_quiet
         set_color cyan; echo "[*] Starting PsExec wizard..."; set_color normal
 
-        set target (__kronos_ask "Target IP or FQDN" "$target"); or return 1
+        set target (__kronos_ask "Target IP or FQDN" "$def_target" "$src_target"); or return 1
         set -U __KRONOS_CACHE_PSEXEC_TARGET "$target"
 
         set domain (__kronos_ask "Domain Name" "$domain"); or return 1

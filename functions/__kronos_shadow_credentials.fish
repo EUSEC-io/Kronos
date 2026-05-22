@@ -29,6 +29,7 @@ function __kronos_shadow_credentials --description "Shadow Credentials attack (K
     # Base fallbacks to ensure variables are populated for confirmation or execution
     if test -z "$target"
         set target $__KRONOS_CACHE_SHADOW_TARGET
+        if test -z "$target"; set target $TGT_HOSTS[1]; end
         if test -z "$target"; set target $TGT_DC_IP; end
         if test -z "$target"; set target $TGT_DC; end
         if test -z "$target"; set target $TGT; end

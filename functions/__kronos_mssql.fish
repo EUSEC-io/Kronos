@@ -33,12 +33,15 @@ function __kronos_mssql --description "Connect to target using mssqlclient.py (M
             set -l def_target "$__KRONOS_CACHE_MSSQL_TARGET"
             set -l src_target "Cache"
             if test -z "$def_target"
-                set def_target "$TGT_DC_IP"; set src_target "TGT_DC_IP"
+                set def_target "$TGT_HOSTS[1]"; set src_target "TGT_HOSTS"
+                if test -z "$def_target"; set def_target "$TGT_HOSTS[1]"; set src_target "TGT_HOSTS"; if test -z "$def_target"; set def_target "$TGT_DC_IP"; set src_target "TGT_DC_IP"; end; end
                 if test -z "$def_target"; set def_target "$TGT_DC"; set src_target "TGT_DC"; end
                 if test -z "$def_target"; set def_target "$TGT"; set src_target "TGT"; end
             end
+                if test -z "$def_target"; set def_target "$TGT"; set src_target "TGT"; end
+            end
             if test -n "$target"; set def_target "$target"; set src_target "CLI Arg"; end
-            set target (__kronos_ask "Target IP/Hostname" "$def_target"); or return 1
+            set target (__kronos_ask "Target IP/Hostname" "$def_target" "$src_target"); or return 1
             set -U __KRONOS_CACHE_MSSQL_TARGET "$target"
 
             if not set -q _flag_kerberos
@@ -58,7 +61,7 @@ function __kronos_mssql --description "Connect to target using mssqlclient.py (M
                 set def_domain "$TGT_DC_DOMAIN"; set src_domain "TGT_DC_DOMAIN"
             end
             if test -n "$domain"; set def_domain "$domain"; set src_domain "CLI Arg"; end
-                set domain (__kronos_ask "Domain" "$def_domain"); or return 1
+                set domain (__kronos_ask "Domain" "$def_domain" "$src_domain"); or return 1
                 set -U __KRONOS_CACHE_MSSQL_DOMAIN "$domain"
 
                 set -l def_auth_val "$__KRONOS_CACHE_MSSQL_AUTH_VAL"

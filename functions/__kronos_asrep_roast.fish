@@ -34,8 +34,11 @@ function __kronos_asrep_roast --description "Run AS-REP Roasting using GetNPUser
             set -l def_target "$__KRONOS_CACHE_ASREP_TARGET"
             set -l src_target "Cache"
             if test -z "$def_target"
-                set def_target "$TGT_DC_IP"; set src_target "TGT_DC_IP"
+                set def_target "$TGT_HOSTS[1]"; set src_target "TGT_HOSTS"
+                if test -z "$def_target"; set def_target "$TGT_HOSTS[1]"; set src_target "TGT_HOSTS"; if test -z "$def_target"; set def_target "$TGT_DC_IP"; set src_target "TGT_DC_IP"; end; end
                 if test -z "$def_target"; set def_target "$TGT_DC"; set src_target "TGT_DC"; end
+                if test -z "$def_target"; set def_target "$TGT"; set src_target "TGT"; end
+            end
                 if test -z "$def_target"; set def_target "$TGT"; set src_target "TGT"; end
             end
             if test -n "$target"; set def_target "$target"; set src_target "CLI Arg"; end
@@ -64,6 +67,7 @@ function __kronos_asrep_roast --description "Run AS-REP Roasting using GetNPUser
     else
         # Quiet mode fallbacks
         if test -z "$target"; set target "$__KRONOS_CACHE_ASREP_TARGET"; end
+        if test -z "$target"; set target $TGT_HOSTS[1]; end
         if test -z "$target"; set target $TGT_DC_IP; end
         if test -z "$target"; set target $TGT_DC; end
         if test -z "$target"; set target $TGT; end

@@ -32,12 +32,15 @@ function __kronos_rdp --description "Connect to target using xfreerdp3 (RDP)"
             set -l def_target "$__KRONOS_CACHE_RDP_TARGET"
             set -l src_target "Cache"
             if test -z "$def_target"
-                set def_target "$TGT_DC_IP"; set src_target "TGT_DC_IP"
+                set def_target "$TGT_HOSTS[1]"; set src_target "TGT_HOSTS"
+                if test -z "$def_target"; set def_target "$TGT_HOSTS[1]"; set src_target "TGT_HOSTS"; if test -z "$def_target"; set def_target "$TGT_DC_IP"; set src_target "TGT_DC_IP"; end; end
                 if test -z "$def_target"; set def_target "$TGT_DC"; set src_target "TGT_DC"; end
                 if test -z "$def_target"; set def_target "$TGT"; set src_target "TGT"; end
             end
+                if test -z "$def_target"; set def_target "$TGT"; set src_target "TGT"; end
+            end
             if test -n "$target"; set def_target "$target"; set src_target "CLI Arg"; end
-            set target (__kronos_ask "Target IP/Hostname" "$def_target"); or return 1
+            set target (__kronos_ask "Target IP/Hostname" "$def_target" "$src_target"); or return 1
             set -U __KRONOS_CACHE_RDP_TARGET "$target"
 
             set -l def_user "$__KRONOS_CACHE_RDP_USER"
@@ -56,7 +59,7 @@ function __kronos_rdp --description "Connect to target using xfreerdp3 (RDP)"
                 set def_domain "$TGT_DC_DOMAIN"; set src_domain "TGT_DC_DOMAIN"
             end
             if test -n "$domain"; set def_domain "$domain"; set src_domain "CLI Arg"; end
-            set domain (__kronos_ask "Domain" "$def_domain"); or return 1
+            set domain (__kronos_ask "Domain" "$def_domain" "$src_domain"); or return 1
             set -U __KRONOS_CACHE_RDP_DOMAIN "$domain"
 
             set -l def_auth_val "$__KRONOS_CACHE_RDP_AUTH_VAL"

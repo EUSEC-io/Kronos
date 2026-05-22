@@ -34,27 +34,36 @@ function __kronos_rpc --description "Connect to target using rpcclient (RPC)"
             set -l def_target "$__KRONOS_CACHE_RPC_TARGET"
             set -l src_target "Cache"
             if test -z "$def_target"
-                set def_target "$TGT_DC_IP"; set src_target "TGT_DC_IP"
+                set def_target "$TGT_HOSTS[1]"; set src_target "TGT_HOSTS"
+                if test -z "$def_target"; set def_target "$TGT_HOSTS[1]"; set src_target "TGT_HOSTS"; if test -z "$def_target"; set def_target "$TGT_DC_IP"; set src_target "TGT_DC_IP"; end; end
                 if test -z "$def_target"; set def_target "$TGT_DC"; set src_target "TGT_DC"; end
                 if test -z "$def_target"; set def_target "$TGT"; set src_target "TGT"; end
             end
+                if test -z "$def_target"; set def_target "$TGT"; set src_target "TGT"; end
+            end
             if test -n "$target"; set def_target "$target"; set src_target "CLI Arg"; end
-            set target (__kronos_ask "Target IP/Hostname" "$def_target"); or return 1
+            set target (__kronos_ask "Target IP/Hostname" "$def_target" "$src_target"); or return 1
             set -U __KRONOS_CACHE_RPC_TARGET "$target"
 
             if not set -q _flag_null; and not set -q _flag_kerberos
                 set -l def_user "$__KRONOS_CACHE_RPC_AUTH_USER"
-                if test -z "$def_user"; set def_user "$TGT_USERNAME"; end
-                if test -z "$def_user"; set def_user "$TGT_CRED_USERNAME"; end
-                if test -n "$auth_user"; set def_user "$auth_user"; end
-                set auth_user (__kronos_ask "Auth Username" "$def_user"); or return 1
+            set -l src_user "Cache"
+            if test -z "$def_user"
+                set def_user "$TGT_USERNAME"; set src_user "TGT_USERNAME"
+                if test -z "$def_user"; set def_user "$TGT_CRED_USERNAME"; set src_user "TGT_CRED_USERNAME"; end
+            end
+            if test -n "$auth_user"; set def_user "$auth_user"; set src_user "CLI Arg"; end
+                set auth_user (__kronos_ask "Auth Username" "$def_user" "$src_user"); or return 1
                 set -U __KRONOS_CACHE_RPC_AUTH_USER "$auth_user"
 
                 set -l def_pass "$__KRONOS_CACHE_RPC_AUTH_PASS"
-                if test -z "$def_pass"; set def_pass "$TGT_PASSWORD"; end
-                if test -z "$def_pass"; set def_pass "$TGT_CRED_PASSWORD"; end
-                if test -n "$auth_pass"; set def_pass "$auth_pass"; end
-                set auth_pass (__kronos_ask "Auth Password" "$def_pass"); or return 1
+            set -l src_pass "Cache"
+            if test -z "$def_pass"
+                set def_pass "$TGT_PASSWORD"; set src_pass "TGT_PASSWORD"
+                if test -z "$def_pass"; set def_pass "$TGT_CRED_PASSWORD"; set src_pass "TGT_CRED_PASSWORD"; end
+            end
+            if test -n "$auth_pass"; set def_pass "$auth_pass"; set src_pass "CLI Arg"; end
+                set auth_pass (__kronos_ask "Auth Password" "$def_pass" "$src_pass"); or return 1
                 set -U __KRONOS_CACHE_RPC_AUTH_PASS "$auth_pass"
             end
 
@@ -64,7 +73,7 @@ function __kronos_rpc --description "Connect to target using rpcclient (RPC)"
                 set def_domain "$TGT_DC_DOMAIN"; set src_domain "TGT_DC_DOMAIN"
             end
             if test -n "$domain"; set def_domain "$domain"; set src_domain "CLI Arg"; end
-            set domain (__kronos_ask "Domain" "$def_domain"); or return 1
+            set domain (__kronos_ask "Domain" "$def_domain" "$src_domain"); or return 1
             set -U __KRONOS_CACHE_RPC_DOMAIN "$domain"
         end
     end
@@ -72,6 +81,7 @@ function __kronos_rpc --description "Connect to target using rpcclient (RPC)"
     # Standard Fallbacks
     if test -z "$target"
         set target $__KRONOS_CACHE_RPC_TARGET
+        if test -z "$target"; set target $TGT_HOSTS[1]; end
         if test -z "$target"; set target $TGT_DC_IP; end
         if test -z "$target"; set target $TGT_DC; end
         if test -z "$target"; set target $TGT; end
