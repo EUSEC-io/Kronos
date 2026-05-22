@@ -30,6 +30,22 @@
 - 🎯 **Deep Context**: Seamlessly pulls targets and credentials from the **[tgt](https://github.com/EUSEC-io/tgt)** framework.
 - ⚡ **Auto-Loading**: Native Fish completions and functions for a fluid CLI experience.
 
+
+---
+
+## 🎬 Demos
+
+### 🌟 Unified Interactive Menu
+Launch the main orchestrator and pick your attack vector from the top-down menu.
+![Kronos Main Menu](assets/kronos-main.gif)
+
+### 🪄 Guided Attack Wizards
+Complex commands like **PsExec** or **SecretsDump** now guide you through every step with pre-filled context from `tgt`.
+![PsExec Wizard](assets/kronos-psexec.gif)
+
+### 🔎 Command Inspection & Editing
+Use the `-X` flag to preview and manually tweak the constructed command before execution.
+![Command Inspection](assets/kronos-inspect.gif)
 ---
 
 ## 🛠 Tools Invoked Under the Hood
