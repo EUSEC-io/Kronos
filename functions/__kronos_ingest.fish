@@ -5,7 +5,7 @@ function __kronos_ingest --description "Ingest Active Directory data using blood
         set wizard 1
     end
 
-    argparse h/help q/quiet u/username= p/password= H/hash= o/output= d/domain= k/kerberos X/edit-cmd w/wizard -- $argv
+    argparse t/target= h/help q/quiet u/username= p/password= H/hash= o/output= d/domain= k/kerberos X/edit-cmd w/wizard -- $argv
     or return 1
 
     if set -q _flag_help
@@ -14,6 +14,7 @@ function __kronos_ingest --description "Ingest Active Directory data using blood
         echo "Ingest Active Directory data using bloodhound-python."
         echo ""
         echo "Options:"
+        echo "  -t, --target IP     Target IP or Hostname"
         echo "  -u, --username USER Auth username"
         echo "  -p, --password PASS Auth password"
         echo "  -H, --hash HASH     Auth NTLM hash"
@@ -26,7 +27,8 @@ function __kronos_ingest --description "Ingest Active Directory data using blood
         return 0
     end
 
-    set -l target $argv[1]
+    set -l target $_flag_target
+    if test -z "$target"; set target $argv[1]; end
     set -l domain $_flag_domain
     set -l auth_user $_flag_username
     set -l auth_pass $_flag_password
@@ -61,32 +63,34 @@ function __kronos_ingest --description "Ingest Active Directory data using blood
     end
 
     if not set -q _flag_quiet
-        set_color cyan; echo "[*] Starting Ingest wizard..."; set_color normal
+        if test "$wizard" -eq 1 -o -z "$target" -o set -q _flag_wizard
+            set_color cyan; echo "[*] Starting Ingest wizard..."; set_color normal
 
-        set target (__kronos_ask "Target DC IP/Hostname" "$target"); or return 1
-        set -U __KRONOS_CACHE_INGEST_TARGET "$target"
+            set target (__kronos_ask "Target DC IP/Hostname" "$target"); or return 1
+            set -U __KRONOS_CACHE_INGEST_TARGET "$target"
 
-        set domain (__kronos_ask "Domain Name" "$domain"); or return 1
-        set -U __KRONOS_CACHE_INGEST_DOMAIN "$domain"
+            set domain (__kronos_ask "Domain Name" "$domain"); or return 1
+            set -U __KRONOS_CACHE_INGEST_DOMAIN "$domain"
 
-        if not set -q _flag_kerberos
-            set auth_user (__kronos_ask "Auth Username" "$auth_user"); or return 1
-            set -U __KRONOS_CACHE_INGEST_AUTH_USER "$auth_user"
+            if not set -q _flag_kerberos
+                set auth_user (__kronos_ask "Auth Username" "$auth_user"); or return 1
+                set -U __KRONOS_CACHE_INGEST_AUTH_USER "$auth_user"
 
-            set -l def_auth_val "$auth_pass"
-            if test -n "$auth_hash"; set def_auth_val "$auth_hash"; end
-            set -l auth_input (__kronos_ask "Auth Password or Hash" "$def_auth_val"); or return 1
-            set -U __KRONOS_CACHE_INGEST_AUTH_VAL "$auth_input"
-            if string match -rq '^[a-fA-F0-9]{32}:[a-fA-F0-9]{32}$|^[a-fA-F0-9]{32}$' -- "$auth_input"
-                set auth_hash "$auth_input"; set auth_pass ""
-            else
-                set auth_pass "$auth_input"; set auth_hash ""
+                set -l def_auth_val "$auth_pass"
+                if test -n "$auth_hash"; set def_auth_val "$auth_hash"; end
+                set -l auth_input (__kronos_ask "Auth Password or Hash" "$def_auth_val"); or return 1
+                set -U __KRONOS_CACHE_INGEST_AUTH_VAL "$auth_input"
+                if string match -rq '^[a-fA-F0-9]{32}:[a-fA-F0-9]{32}$|^[a-fA-F0-9]{32}$' -- "$auth_input"
+                    set auth_hash "$auth_input"; set auth_pass ""
+                else
+                    set auth_pass "$auth_input"; set auth_hash ""
+                end
             end
-        end
 
-        set -l def_out "$domain-bloodhound.zip"
-        if test -n "$outfile"; set def_out "$outfile"; end
-        set outfile (__kronos_ask "Output Zip Name" "$def_out"); or return 1
+            set -l def_out "$domain-bloodhound.zip"
+            if test -n "$outfile"; set def_out "$outfile"; end
+            set outfile (__kronos_ask "Output Zip Name" "$def_out"); or return 1
+        end
     end
 
     if test -z "$target"; echo "error: target is required"; return 1; end

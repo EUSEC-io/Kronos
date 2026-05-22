@@ -5,7 +5,7 @@ function __kronos_secretsdump --description "Dump AD secrets using secretsdump.p
         set wizard 1
     end
 
-    argparse h/help q/quiet u/username= p/password= H/hash= d/domain= k/kerberos t/target-user= X/edit-cmd w/wizard -- $argv
+    argparse t/target= h/help q/quiet u/username= p/password= H/hash= d/domain= k/kerberos T/target-user= X/edit-cmd w/wizard -- $argv
     or return 1
 
     if set -q _flag_help
@@ -14,7 +14,8 @@ function __kronos_secretsdump --description "Dump AD secrets using secretsdump.p
         echo "Dump Active Directory secrets using impacket's secretsdump.py."
         echo ""
         echo "Options:"
-        echo "  -t, --target-user USER  Just dump the specified user (e.g. krbtgt)"
+        echo "  -t, --target IP         Target IP or Hostname"
+        echo "  -T, --target-user USER  Just dump the specified user (e.g. krbtgt)"
         echo "  -u, --username USER     Auth username"
         echo "  -p, --password PASS     Auth password"
         echo "  -H, --hash HASH         Auth NTLM hash"
@@ -26,7 +27,8 @@ function __kronos_secretsdump --description "Dump AD secrets using secretsdump.p
         return 0
     end
 
-    set -l target $argv[1]
+    set -l target $_flag_target
+    if test -z "$target"; set target $argv[1]; end
     set -l domain $_flag_domain
     set -l auth_user $_flag_username
     set -l auth_pass $_flag_password
@@ -64,49 +66,51 @@ function __kronos_secretsdump --description "Dump AD secrets using secretsdump.p
     end
 
     if not set -q _flag_quiet
-        set_color cyan; echo "[*] Starting SecretsDump wizard..."; set_color normal
+        if test "$wizard" -eq 1 -o -z "$target" -o set -q _flag_wizard
+            set_color cyan; echo "[*] Starting SecretsDump wizard..."; set_color normal
 
-        set target (__kronos_ask "Target DC IP/Hostname" "$target"); or return 1
-        set -U __KRONOS_CACHE_SECRETS_TARGET "$target"
+            set target (__kronos_ask "Target DC IP/Hostname" "$target"); or return 1
+            set -U __KRONOS_CACHE_SECRETS_TARGET "$target"
 
-        set domain (__kronos_ask "Domain Name" "$domain"); or return 1
-        set -U __KRONOS_CACHE_SECRETS_DOMAIN "$domain"
+            set domain (__kronos_ask "Domain Name" "$domain"); or return 1
+            set -U __KRONOS_CACHE_SECRETS_DOMAIN "$domain"
 
-        set -l dump_all (__kronos_ask_confirm "Dump ALL account secrets?" y); or return 1
-        if test "$dump_all" = "no"
-            set target_user (__kronos_ask "Specific user to dump (e.g. krbtgt)" "$target_user"); or return 1
-            set -U __KRONOS_CACHE_SECRETS_TARGET_USER "$target_user"
-        else
-            set target_user ""
-        end
-
-        if not set -q _flag_kerberos
-            set auth_user (__kronos_ask "Auth Username" "$auth_user"); or return 1
-            set -U __KRONOS_CACHE_SECRETS_AUTH_USER "$auth_user"
-
-            set -l def_auth_val "$auth_pass"
-            if test -n "$auth_hash"; set def_auth_val "$auth_hash"; end
-            set -l auth_input (__kronos_ask "Auth Password or Hash" "$def_auth_val"); or return 1
-            set -U __KRONOS_CACHE_SECRETS_AUTH_VAL "$auth_input"
-            
-            if string match -rq '^[a-fA-F0-9]{32}:[a-fA-F0-9]{32}$|^[a-fA-F0-9]{32}$' -- "$auth_input"
-                set auth_hash "$auth_input"; set auth_pass ""
+            set -l dump_all (__kronos_ask_confirm "Dump ALL account secrets?" y); or return 1
+            if test "$dump_all" = "no"
+                set target_user (__kronos_ask "Specific user to dump (e.g. krbtgt)" "$target_user"); or return 1
+                set -U __KRONOS_CACHE_SECRETS_TARGET_USER "$target_user"
             else
-                set auth_pass "$auth_input"; set auth_hash ""
+                set target_user ""
             end
-        end
 
-        # Confirmation
-        echo ""
-        echo "Configuration:"
-        echo "  Target: $target"
-        echo "  Domain: $domain"
-        echo "  Dumping: "(test -n "$target_user"; and echo "User: $target_user"; or echo "All Users")
-        echo "  Auth:   "(set -q _flag_kerberos; and echo "Kerberos"; or echo "$auth_user")
-        echo ""
-        if test (__kronos_ask_confirm "Proceed with SecretsDump on $target?" n) != "yes"
-            echo "Aborted."
-            return 1
+            if not set -q _flag_kerberos
+                set auth_user (__kronos_ask "Auth Username" "$auth_user"); or return 1
+                set -U __KRONOS_CACHE_SECRETS_AUTH_USER "$auth_user"
+
+                set -l def_auth_val "$auth_pass"
+                if test -n "$auth_hash"; set def_auth_val "$auth_hash"; end
+                set -l auth_input (__kronos_ask "Auth Password or Hash" "$def_auth_val"); or return 1
+                set -U __KRONOS_CACHE_SECRETS_AUTH_VAL "$auth_input"
+                
+                if string match -rq '^[a-fA-F0-9]{32}:[a-fA-F0-9]{32}$|^[a-fA-F0-9]{32}$' -- "$auth_input"
+                    set auth_hash "$auth_input"; set auth_pass ""
+                else
+                    set auth_pass "$auth_input"; set auth_hash ""
+                end
+            end
+
+            # Confirmation
+            echo ""
+            echo "Configuration:"
+            echo "  Target: $target"
+            echo "  Domain: $domain"
+            echo "  Dumping: "(test -n "$target_user"; and echo "User: $target_user"; or echo "All Users")
+            echo "  Auth:   "(set -q _flag_kerberos; and echo "Kerberos"; or echo "$auth_user")
+            echo ""
+            if test (__kronos_ask_confirm "Proceed with SecretsDump on $target?" n) != "yes"
+                echo "Aborted."
+                return 1
+            end
         end
     end
 

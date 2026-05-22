@@ -1,6 +1,6 @@
 # completions/kronos.fish
 
-set -l commands userenum dominfo ingest connect asrep-roast kerbroast spray forcechange gmsa ticket convert request lookupsid add-user add-member add-computer dacl search secretsdump psexec rbcd shadow-credentials install reset help
+set -l commands userenum dominfo ingest connect asrep-roast kerberoast spray forcechange gmsa ticket convert request lookupsid add-user add-member add-computer dacl search secretsdump psexec rbcd shadow-credentials install reset help
 set -l protocols rdp winrm ftp smb rpc mssql
 set -l ticket_types golden silver diamond sapphire trust cross-forest
 
@@ -13,7 +13,7 @@ complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a dominfo -d 
 complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a ingest -d "Ingest AD data using bloodhound-python"
 complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a connect -d "Connect to target via specific protocol"
 complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a asrep-roast -d "AS-REP Roasting (GetNPUsers.py)"
-complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a kerbroast -d "Kerberoasting (GetUserSPNs.py)"
+complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a kerberoast -d "Kerberoasting (GetUserSPNs.py)"
 complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a spray -d "Password spray using valid_users.txt"
 complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a forcechange -d "Force change user password (bloodyAD)"
 complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a gmsa -d "Read GMSA passwords (nxc)"
@@ -26,7 +26,7 @@ complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a secretsdump
 complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a psexec -d "Remote command execution (psexec.py)"
 complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a rbcd -d "Perform RBCD attack"
 complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a shadow-credentials -d "Perform Shadow Credentials attack"
-complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a ticket -d "Create Golden/Silver/Diamond/Sapphire/Trust/Cross-Forest tickets"
+complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a ticket -d "Create advanced AD tickets"
 complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a convert -d "Convert kirbi/ccache tickets"
 complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a request -d "Request TGT/ST (getTGT/getST)"
 complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a lookupsid -d "Enumerate AD SIDs (lookupsid.py)"
@@ -43,21 +43,26 @@ complete -c kronos -n "__fish_seen_subcommand_from connect; and not __fish_seen_
 complete -c kronos -n "__fish_seen_subcommand_from connect; and not __fish_seen_subcommand_from $protocols" -a mssql -d "Connect via MSSQL (mssqlclient.py)"
 
 # Ticket subcommands
-complete -c kronos -n "__fish_seen_subcommand_from ticket; and not __fish_seen_subcommand_from $ticket_types" -a golden -d "Create Golden Ticket (interactive wizard)"
-complete -c kronos -n "__fish_seen_subcommand_from ticket; and not __fish_seen_subcommand_from $ticket_types" -a silver -d "Create Silver Ticket (interactive wizard)"
-complete -c kronos -n "__fish_seen_subcommand_from ticket; and not __fish_seen_subcommand_from $ticket_types" -a diamond -d "Create Diamond Ticket (interactive wizard)"
-complete -c kronos -n "__fish_seen_subcommand_from ticket; and not __fish_seen_subcommand_from $ticket_types" -a sapphire -d "Create Sapphire Ticket (interactive wizard)"
-complete -c kronos -n "__fish_seen_subcommand_from ticket; and not __fish_seen_subcommand_from $ticket_types" -a trust -d "Create Trust Ticket (interactive wizard)"
-complete -c kronos -n "__fish_seen_subcommand_from ticket; and not __fish_seen_subcommand_from $ticket_types" -a cross-forest -d "Create Cross-Forest Golden Ticket (interactive wizard)"
+complete -c kronos -n "__fish_seen_subcommand_from ticket; and not __fish_seen_subcommand_from $ticket_types" -a golden -d "Create Golden Ticket"
+complete -c kronos -n "__fish_seen_subcommand_from ticket; and not __fish_seen_subcommand_from $ticket_types" -a silver -d "Create Silver Ticket"
+complete -c kronos -n "__fish_seen_subcommand_from ticket; and not __fish_seen_subcommand_from $ticket_types" -a diamond -d "Create Diamond Ticket"
+complete -c kronos -n "__fish_seen_subcommand_from ticket; and not __fish_seen_subcommand_from $ticket_types" -a sapphire -d "Create Sapphire Ticket"
+complete -c kronos -n "__fish_seen_subcommand_from ticket; and not __fish_seen_subcommand_from $ticket_types" -a trust -d "Create Trust Ticket"
+complete -c kronos -n "__fish_seen_subcommand_from ticket; and not __fish_seen_subcommand_from $ticket_types" -a cross-forest -d "Create Cross-Forest Golden Ticket"
 
-# Shared flags
-set -l needs_auth userenum dominfo connect asrep-roast kerbroast forcechange gmsa lookupsid ingest request add-user add-member add-computer dacl search secretsdump psexec rbcd shadow-credentials ticket
-complete -c kronos -n "__fish_seen_subcommand_from $needs_auth" -s u -l username -d "Username"
-complete -c kronos -n "__fish_seen_subcommand_from dominfo connect kerbroast forcechange gmsa lookupsid ingest request psexec" -s p -l password -d "Password"
-complete -c kronos -n "__fish_seen_subcommand_from connect kerbroast forcechange gmsa lookupsid request add-computer secretsdump psexec ticket" -s H -l hash -d "NTLM Hash"
-complete -c kronos -n "__fish_seen_subcommand_from dominfo connect asrep-roast kerbroast forcechange gmsa lookupsid ingest add-user add-member add-computer dacl search secretsdump psexec rbcd shadow-credentials" -s k -l kerberos -d "Use Kerberos authentication"
-complete -c kronos -n "__fish_seen_subcommand_from $commands" -s h -l help -d "Show help"
-complete -c kronos -n "__fish_seen_subcommand_from $commands" -s q -l quiet -d "Skip prompts and use cached values"
+# Universal Flags
+set -l all_cmds $commands $protocols $ticket_types
+complete -c kronos -n "__fish_seen_subcommand_from $all_cmds" -s h -l help -d "Show help"
+complete -c kronos -n "__fish_seen_subcommand_from $all_cmds" -s q -l quiet -d "Skip prompts and use cached values"
+complete -c kronos -n "__fish_seen_subcommand_from $all_cmds" -s X -l edit-cmd -d "Inspect and edit command before execution"
+complete -c kronos -n "__fish_seen_subcommand_from $all_cmds" -s t -l target -r -d "Target IP or Hostname"
+
+# Shared Auth Flags
+set -l needs_auth userenum dominfo connect asrep-roast kerberoast forcechange gmsa lookupsid ingest request add-user add-member add-computer dacl search secretsdump psexec rbcd shadow-credentials ticket rdp winrm ftp smb rpc mssql
+complete -c kronos -n "__fish_seen_subcommand_from $needs_auth" -s u -l username -r -d "Username"
+complete -c kronos -n "__fish_seen_subcommand_from $needs_auth" -s p -l password -r -d "Password"
+complete -c kronos -n "__fish_seen_subcommand_from $needs_auth" -s H -l hash -r -d "NTLM Hash"
+complete -c kronos -n "__fish_seen_subcommand_from $needs_auth" -s k -l kerberos -d "Use Kerberos authentication"
 
 # Subcommand-specific flags
 complete -c kronos -n "__fish_seen_subcommand_from userenum" -s w -l wordlist -r -d "Custom wordlist"
@@ -66,34 +71,8 @@ complete -c kronos -n "__fish_seen_subcommand_from add-user" -s P -l new-passwor
 complete -c kronos -n "__fish_seen_subcommand_from add-member" -s g -l group -r -d "Target group"
 complete -c kronos -n "__fish_seen_subcommand_from add-member" -s m -l member -r -d "User to add"
 complete -c kronos -n "__fish_seen_subcommand_from add-computer" -s C -l computer -r -d "Computer name"
-complete -c kronos -n "__fish_seen_subcommand_from add-computer" -s P -l computer-pass -r -d "Computer password"
-complete -c kronos -n "__fish_seen_subcommand_from dacl" -s t -l target-object -r -d "Target object"
-complete -c kronos -n "__fish_seen_subcommand_from dacl" -s m -l member -r -d "Grantee user/group"
-complete -c kronos -n "__fish_seen_subcommand_from dacl" -s a -l action -x -a "add remove set" -d "Action"
-complete -c kronos -n "__fish_seen_subcommand_from dacl" -s p -l permission -x -a "genericAll dcsync owner all" -d "Permission"
-complete -c kronos -n "__fish_seen_subcommand_from search" -s q -l query -r -d "Search query"
-complete -c kronos -n "__fish_seen_subcommand_from search" -s a -l attr -r -d "Attribute to fetch"
-complete -c kronos -n "__fish_seen_subcommand_from rbcd" -s t -l target-computer -r -d "Target computer"
-complete -c kronos -n "__fish_seen_subcommand_from rbcd" -s m -l delegate-to -r -d "Delegate to"
-complete -c kronos -n "__fish_seen_subcommand_from rbcd" -s a -l action -x -a "add remove" -d "Action"
-complete -c kronos -n "__fish_seen_subcommand_from shadow-credentials" -s t -l target-object -r -d "Target object"
-complete -c kronos -n "__fish_seen_subcommand_from shadow-credentials" -s a -l action -x -a "add remove list" -d "Action"
-complete -c kronos -n "__fish_seen_subcommand_from dominfo" -s P -l pass-policy -d "Query password policy"
-complete -c kronos -n "__fish_seen_subcommand_from dominfo" -s N -l NULL -d "Force NULL session"
-complete -c kronos -n "__fish_seen_subcommand_from ingest" -s o -l output -r -d "Output zip filename"
-complete -c kronos -n "__fish_seen_subcommand_from kerbroast" -s t -l target -d "Roast specific user"
-complete -c kronos -n "__fish_seen_subcommand_from spray" -s u -l userlist -r -d "User list"
-complete -c kronos -n "__fish_seen_subcommand_from ticket" -s S -l sid -r -d "Domain SID"
-complete -c kronos -n "__fish_seen_subcommand_from ticket" -s s -l spn -r -d "Target SPN"
-complete -c kronos -n "__fish_seen_subcommand_from ticket" -s I -l user-id -r -d "Target User RID"
-complete -c kronos -n "__fish_seen_subcommand_from ticket" -s G -l groups -r -d "Target Group RIDs"
-complete -c kronos -n "__fish_seen_subcommand_from ticket" -s A -l auth-user -r -d "Auth Username"
-complete -c kronos -n "__fish_seen_subcommand_from ticket" -s P -l auth-pass -r -d "Auth Password"
-complete -c kronos -n "__fish_seen_subcommand_from ticket" -s E -l extra-sid -r -d "Extra SID"
-complete -c kronos -n "__fish_seen_subcommand_from request" -s s -l spn -r -d "Target SPN"
-complete -c kronos -n "__fish_seen_subcommand_from lookupsid" -s f -l filter -r -d "Filter output"
-complete -c kronos -n "__fish_seen_subcommand_from lookupsid" -s D -l domain-sid -d "Only show Domain SID"
-complete -c kronos -n "__fish_seen_subcommand_from convert" -s i -l input -r -d "Input ticket"
-complete -c kronos -n "__fish_seen_subcommand_from convert" -s o -l output -r -d "Output ticket"
-complete -c kronos -n "__fish_seen_subcommand_from secretsdump" -s t -l target-user -r -d "Specific user to dump"
+complete -c kronos -n "__fish_seen_subcommand_from dacl" -s t -l target-object -r -d "Target object (DN or SamAccountName)"
+complete -c kronos -n "__fish_seen_subcommand_from search" -l query -r -d "Search query"
+complete -c kronos -n "__fish_seen_subcommand_from kerberoast" -s T -l target-user -r -d "Specific user to roast"
+complete -c kronos -n "__fish_seen_subcommand_from secretsdump" -s T -l target-user -r -d "Specific user to dump"
 complete -c kronos -n "__fish_seen_subcommand_from reset" -s y -l yes -d "Skip confirmation prompt"

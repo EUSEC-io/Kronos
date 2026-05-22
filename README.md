@@ -116,7 +116,7 @@ Automate common enumeration and manipulation tasks:
 - `userenum`: Run Kerbrute and automatically save results to `valid_users.txt`.
 - `spray`: Password spray using `valid_users.txt` (or custom list) via NetExec.
 - `asrep-roast`: Perform AS-REP roasting against target users.
-- `kerbroast`: Perform Kerberoasting against all or specific SPNs.
+- `kerberoast`: Perform Kerberoasting against all or specific SPNs.
 - `lookupsid`: Enumerate SIDs. Use `-D` to quickly grab the **Domain SID**.
 - `ingest`: Run BloodHound-Python and generate a clean `.zip` output.
 - `forcechange`: Forcefully reset a user's password using `bloodyAD`.
