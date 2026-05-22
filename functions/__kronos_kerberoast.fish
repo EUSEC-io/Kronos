@@ -40,17 +40,23 @@ function __kronos_kerberoast --description "Run Kerberoasting using GetUserSPNs.
             set_color cyan; echo "[*] Starting Kerberoast wizard..."; set_color normal
 
             set -l def_target "$__KRONOS_CACHE_KERBEROAST_TARGET"
-            if test -z "$def_target"; set def_target "$TGT_DC_IP"; end
-            if test -z "$def_target"; set def_target "$TGT_DC"; end
-            if test -z "$def_target"; set def_target "$TGT"; end
-            if test -n "$target"; set def_target "$target"; end
-            set target (__kronos_ask "Target DC IP/Hostname" "$def_target"); or return 1
+            set -l src_target "Cache"
+            if test -z "$def_target"
+                set def_target "$TGT_DC_IP"; set src_target "TGT_DC_IP"
+                if test -z "$def_target"; set def_target "$TGT_DC"; set src_target "TGT_DC"; end
+                if test -z "$def_target"; set def_target "$TGT"; set src_target "TGT"; end
+            end
+            if test -n "$target"; set def_target "$target"; set src_target "CLI Arg"; end
+            set target (__kronos_ask "Target DC IP/Hostname" "$def_target" "$src_target"); or return 1
             set -U __KRONOS_CACHE_KERBEROAST_TARGET "$target"
 
             set -l def_domain "$__KRONOS_CACHE_KERBEROAST_DOMAIN"
-            if test -z "$def_domain"; set def_domain "$TGT_DC_DOMAIN"; end
-            if test -n "$domain"; set def_domain "$domain"; end
-            set domain (__kronos_ask "Domain Name" "$def_domain"); or return 1
+            set -l src_domain "Cache"
+            if test -z "$def_domain"
+                set def_domain "$TGT_DC_DOMAIN"; set src_domain "TGT_DC_DOMAIN"
+            end
+            if test -n "$domain"; set def_domain "$domain"; set src_domain "CLI Arg"; end
+            set domain (__kronos_ask "Domain Name" "$def_domain" "$src_domain"); or return 1
             set -U __KRONOS_CACHE_KERBEROAST_DOMAIN "$domain"
 
             set -l roast_all (__kronos_ask_confirm "Kerberoast ALL accounts?" y); or return 1
@@ -65,10 +71,14 @@ function __kronos_kerberoast --description "Run Kerberoasting using GetUserSPNs.
 
             if not set -q _flag_kerberos
                 set -l def_auth_user "$__KRONOS_CACHE_KERBEROAST_AUTH_USER"
-                if test -z "$def_auth_user"; set def_auth_user "$TGT_USERNAME"; end
-                if test -z "$def_auth_user"; set def_auth_user "$TGT_CRED_USERNAME"; end
+            set -l src_user "Cache"
+            if test -z "$def_auth_user"
+                set def_auth_user "$TGT_USERNAME"; set src_user "TGT_USERNAME"
+                if test -z "$def_auth_user"; set def_auth_user "$TGT_CRED_USERNAME"; set src_user "TGT_CRED_USERNAME"; end
+            end
+            if test -n "$auth_user"; set def_auth_user "$auth_user"; set src_user "CLI Arg"; end
                 if test -n "$user"; set def_auth_user "$user"; end
-                set user (__kronos_ask "Auth Username" "$def_auth_user"); or return 1
+                set user (__kronos_ask "Auth Username" "$def_auth_user" "$src_user"); or return 1
                 set -U __KRONOS_CACHE_KERBEROAST_AUTH_USER "$user"
 
                 set -l def_auth_val "$__KRONOS_CACHE_KERBEROAST_AUTH_VAL"

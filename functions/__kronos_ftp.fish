@@ -25,15 +25,24 @@ function __kronos_ftp --description "Connect to target using ftp (FTP)"
             set_color cyan; echo "[*] Starting FTP connection wizard..."; set_color normal
             
             set -l def_target "$__KRONOS_CACHE_FTP_TARGET"
-            if test -z "$def_target"; set def_target "$TGT"; end
-            if test -n "$target"; set def_target "$target"; end
+            set -l src_target "Cache"
+            if test -z "$def_target"
+                set def_target "$TGT_DC_IP"; set src_target "TGT_DC_IP"
+                if test -z "$def_target"; set def_target "$TGT_DC"; set src_target "TGT_DC"; end
+                if test -z "$def_target"; set def_target "$TGT"; set src_target "TGT"; end
+            end
+            if test -n "$target"; set def_target "$target"; set src_target "CLI Arg"; end
             set target (__kronos_ask "Target IP/Hostname" "$def_target"); or return 1
             set -U __KRONOS_CACHE_FTP_TARGET "$target"
 
             set -l def_user "$__KRONOS_CACHE_FTP_USER"
-            if test -z "$def_user"; set def_user "$TGT_CRED_USERNAME"; end
-            if test -n "$user"; set def_user "$user"; end
-            set user (__kronos_ask "Username" "$def_user"); or return 1
+            set -l src_user "Cache"
+            if test -z "$def_user"
+                set def_user "$TGT_USERNAME"; set src_user "TGT_USERNAME"
+                if test -z "$def_user"; set def_user "$TGT_CRED_USERNAME"; set src_user "TGT_CRED_USERNAME"; end
+            end
+            if test -n "$user"; set def_user "$user"; set src_user "CLI Arg"; end
+            set user (__kronos_ask "Username" "$def_user" "$src_user"); or return 1
             set -U __KRONOS_CACHE_FTP_USER "$user"
         end
     else

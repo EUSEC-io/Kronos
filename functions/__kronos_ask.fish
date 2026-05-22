@@ -1,9 +1,13 @@
 # description: Private helper to ask for text input (gum or read fallback)
-function __kronos_ask --argument-names label default
+function __kronos_ask --argument-names label default source
     if command -q gum
         set_color cyan >&2; echo "  $label" >&2; set_color normal >&2
         if test -n "$default"
-            set_color brblack >&2; echo "    [Enter to keep default, or delete and type '.' to clear]" >&2; set_color normal >&2
+            set -l help_msg "Enter to keep default, or delete and type '.' to clear"
+            if test -n "$source"
+                set help_msg "Source: $source | $help_msg"
+            end
+            set_color brblack >&2; echo "    [$help_msg]" >&2; set_color normal >&2
         else
             set_color brblack >&2; echo "    [optional — Enter to skip]" >&2; set_color normal >&2
         end
@@ -25,7 +29,12 @@ function __kronos_ask --argument-names label default
         return 0
     end
 
-    read -P "  $label [$default]: " value
+    set -l help_suffix ""
+    if test -n "$source"
+        set help_suffix " (Source: $source)"
+    end
+    
+    read -P "  $label$help_suffix [$default]: " value
     set -l rc $status
     if test $rc -ne 0; return $rc; end
     if test "$value" = "."
