@@ -1,6 +1,6 @@
 # description: Request TGT or ST and export KRB5CCNAME
 function __kronos_request --description "Request TGT or ST and export KRB5CCNAME"
-    argparse h/help u/username= p/password= H/hash= s/spn= d/domain= t/target= q/quiet w/wizard -- $argv
+    argparse h/help u/username= p/password= H/hash= s/spn= d/domain= t/target= X/edit-cmd q/quiet w/wizard -- $argv
     or return 1
 
     if set -q _flag_help
@@ -13,8 +13,9 @@ function __kronos_request --description "Request TGT or ST and export KRB5CCNAME
         echo "  -p, --password PASS Provide password"
         echo "  -H, --hash HASH     Provide NTLM hash"
         echo "  -s, --spn SPN       Target SPN (for ST request)"
-        echo "  -d, --domain DOMAIN Target domain FQDN"
+        echo "  -d, --domain DOMAIN Target domain Name"
         echo "  -t, --target DC_IP  DC IP or hostname"
+        echo "  -X, --edit-cmd      Inspect and edit the command before execution"
         echo "  -q, --quiet         Skip prompts and use fallbacks"
         echo "  -h, --help          Show this help message"
         return 0
@@ -50,8 +51,8 @@ function __kronos_request --description "Request TGT or ST and export KRB5CCNAME
         else
             set pass "$cached_auth"
         end
-        if test -z "$pass"; and test -z "$hash"; set pass $TGT_PASSWORD; end
-        if test -z "$pass"; and test -z "$hash"; set pass $TGT_CRED_PASSWORD; end
+        if test -z "$auth_pass"; and test -z "$auth_hash"; set pass $TGT_PASSWORD; end
+        if test -z "$auth_pass"; and test -z "$auth_hash"; set pass $TGT_CRED_PASSWORD; end
     end
     if test -z "$spn"; set spn $__KRONOS_CACHE_REQUEST_SPN; end
 
@@ -96,14 +97,14 @@ function __kronos_request --description "Request TGT or ST and export KRB5CCNAME
     if test -n "$spn"
         if command -v getST.py >/dev/null; set impacket_cmd getST.py
         else if command -v impacket-getST >/dev/null; set impacket_cmd impacket-getST
-        else; echo "error: getST not found."; return 1; end
+        else; echo "error: getST not found. run 'kronos install'."; return 1; end
 
         echo "[*] Requesting Service Ticket for $spn..."
         set -a req_args -spn "$spn" -dc-ip "$target"
     else
         if command -v getTGT.py >/dev/null; set impacket_cmd getTGT.py
         else if command -v impacket-getTGT >/dev/null; set impacket_cmd impacket-getTGT
-        else; echo "error: getTGT not found."; return 1; end
+        else; echo "error: getTGT not found. run 'kronos install'."; return 1; end
 
         echo "[*] Requesting Ticket Granting Ticket for $user..."
         set -a req_args -dc-ip "$target"
@@ -115,8 +116,13 @@ function __kronos_request --description "Request TGT or ST and export KRB5CCNAME
         set -a req_args "$domain/$user:$pass"
     end
 
+    set -l full_cmd "$impacket_cmd "(string join ' ' -- $req_args)
+    if set -q _flag_edit_cmd
+        set full_cmd (__kronos_edit_cmd "$full_cmd"); or return 1
+    end
+
     __kronos_check_dep $impacket_cmd; or return 1
-    command $impacket_cmd $req_args
+    command eval $full_cmd
 
     if test -f "$user.ccache"
         set -gx KRB5CCNAME "$PWD/$user.ccache"

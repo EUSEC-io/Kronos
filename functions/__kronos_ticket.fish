@@ -3,7 +3,7 @@ function __kronos_ticket --description "Create advanced AD tickets using tickete
     set -l ticket_types golden silver diamond sapphire trust cross-forest
     
     # Run argparse FIRST so we know if -q is set
-    argparse h/help u/user= d/domain= S/sid= H/hash= s/spn= I/user-id= G/groups= A/auth-user= P/auth-pass= L/auth-hash= K/aes-key= E/extra-sid= q/quiet -- $argv
+    argparse h/help u/user= d/domain= S/sid= H/hash= s/spn= I/user-id= G/groups= A/auth-user= P/auth-pass= L/auth-hash= K/aes-key= E/extra-sid= q/quiet X/edit-cmd -- $argv
     or return 1
 
     if set -q _flag_help
@@ -13,6 +13,7 @@ function __kronos_ticket --description "Create advanced AD tickets using tickete
         echo ""
         echo "Options:"
         echo "  -q, --quiet          Skip prompts and use cached/default values"
+        echo "  -X, --edit-cmd       Inspect and edit the command before execution"
         echo "  -h, --help           Show this help message"
         return 0
     end
@@ -31,6 +32,10 @@ function __kronos_ticket --description "Create advanced AD tickets using tickete
     else if contains -- "$subaction" $ticket_types
         if not set -q _flag_quiet
             set wizard 1
+        end
+        # Only remove if it was explicitly passed as an argument
+        if test (count $argv) -gt 0; and test "$argv[1]" = "$subaction"
+            set -e argv[1]
         end
     end
 
@@ -259,8 +264,14 @@ function __kronos_ticket --description "Create advanced AD tickets using tickete
     
     set -a ticket_args "$final_user"
 
+    set -l full_cmd "$impacket_cmd "(string join ' ' -- $ticket_args)
+    if set -q _flag_edit_cmd
+        set full_cmd (__kronos_edit_cmd "$full_cmd"); or return 1
+    end
+
     __kronos_check_dep $impacket_cmd; or return 1
-    command $impacket_cmd $ticket_args
+    echo "[*] Forging ticket via $impacket_cmd..."
+    eval $full_cmd
     
     if test -f "$final_user.ccache"
         set -gx KRB5CCNAME "$PWD/$final_user.ccache"

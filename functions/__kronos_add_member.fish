@@ -1,6 +1,14 @@
 # description: Add a user to an AD group using bloodyAD
 function __kronos_add_member --description "Add a user to an AD group using bloodyAD"
-    argparse h/help q/quiet u/username= p/password= k/kerberos g/group= m/member= w/wizard -- $argv
+    set -l subaction $argv[1]
+    set -l wizard 0
+    if test (count $argv) -eq 0
+        if not set -q _flag_quiet
+            set wizard 1
+        end
+    end
+
+    argparse h/help q/quiet u/username= p/password= k/kerberos g/group= m/member= X/edit-cmd w/wizard -- $argv
     or return 1
 
     if set -q _flag_help
@@ -14,6 +22,7 @@ function __kronos_add_member --description "Add a user to an AD group using bloo
         echo "  -u, --username USER     Auth username"
         echo "  -p, --password PASS     Auth password"
         echo "  -k, --kerberos          Use Kerberos authentication"
+        echo "  -X, --edit-cmd          Inspect and edit the command before execution"
         echo "  -q, --quiet             Skip all prompts and use fallbacks/cached values"
         echo "  -h, --help              Show this help message"
         return 0
@@ -46,7 +55,7 @@ function __kronos_add_member --description "Add a user to an AD group using bloo
         if test -z "$auth_pass"; set auth_pass $TGT_CRED_PASSWORD; end
     end
 
-    if not set -q _flag_quiet
+    if test "$wizard" -eq 1; or set -q _flag_wizard
         # Force prompt always if not quiet
         set_color cyan; echo "[*] Starting Add Member wizard..."; set_color normal
         
@@ -92,21 +101,25 @@ function __kronos_add_member --description "Add a user to an AD group using bloo
         return 1
     end
 
-    set -l cmd_str bloodyAD --host "$target" -d "$domain"
+    set -l cmd_str "bloodyAD --host \"$target\" -d \"$domain\""
     if set -q _flag_kerberos
-        set -a cmd_str -k
+        set cmd_str "$cmd_str -k"
     else
         if test -z "$auth_user"
             echo "error: auth credentials required" >&2
             return 1
         end
-        set -a cmd_str -u "$auth_user" -p "$auth_pass"
+        set cmd_str "$cmd_str -u \"$auth_user\" -p \"$auth_pass\""
     end
 
-    set -a cmd_str add groupMember "$group" "$member"
+    set cmd_str "$cmd_str add groupMember \"$group\" \"$member\""
+
+    if set -q _flag_edit_cmd
+        set cmd_str (__kronos_edit_cmd "$cmd_str"); or return 1
+    end
 
     __kronos_check_dep bloodyAD; or return 1
 
     echo "[*] Adding $member to group $group via bloodyAD..."
-    command $cmd_str
+    command eval $cmd_str
 end

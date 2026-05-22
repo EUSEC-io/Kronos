@@ -1,6 +1,6 @@
 # description: Connect to target using evil-winrm (WinRM)
 function __kronos_winrm --description "Connect to target using evil-winrm (WinRM)"
-    argparse h/help u/username= p/password= H/hash= k/kerberos q/quiet w/wizard -- $argv
+    argparse h/help X/edit-cmd u/username= p/password= H/hash= k/kerberos q/quiet w/wizard -- $argv
     or return 1
 
     if set -q _flag_help
@@ -13,6 +13,7 @@ function __kronos_winrm --description "Connect to target using evil-winrm (WinRM
         echo "  -p, --password PASS Provide password (falls back to \$TGT_CRED_PASSWORD)"
         echo "  -H, --hash HASH     Provide NTLM hash"
         echo "  -k, --kerberos      Use Kerberos authentication (requires KRB5CCNAME)"
+        echo "  -X, --edit-cmd      Edit command in your editor before execution"
         echo "  -q, --quiet         Skip prompts and use cached/default values"
         echo "  -h, --help          Show this help message"
         return 0
@@ -56,45 +57,51 @@ function __kronos_winrm --description "Connect to target using evil-winrm (WinRM
                 end
             end
         end
-    else
-        # Standard Fallbacks
-        if test -z "$target"; set target "$__KRONOS_CACHE_WINRM_TARGET"; end
-        if test -z "$target"; set target $TGT; end
+    end
 
-        if test -z "$user"; set user "$__KRONOS_CACHE_WINRM_USER"; end
-        if test -z "$user"; set user $TGT_USERNAME; end
-        if test -z "$user"; set user $TGT_CRED_USERNAME; end
+    # Standard Fallbacks
+    if test -z "$target"; set target "$__KRONOS_CACHE_WINRM_TARGET"; end
+    if test -z "$target"; set target $TGT; end
 
-        if not set -q _flag_kerberos
-            set -l cached_auth "$__KRONOS_CACHE_WINRM_AUTH_VAL"
-            if string match -rq '^[a-fA-F0-9]{32}:[a-fA-F0-9]{32}$|^[a-fA-F0-9]{32}$' -- "$cached_auth"
-                set hash "$cached_auth"
-            else
-                set pass "$cached_auth"
-            end
-            if test -z "$pass"; and test -z "$hash"; set pass $TGT_PASSWORD; end
-            if test -z "$pass"; and test -z "$hash"; set pass $TGT_CRED_PASSWORD; end
+    if test -z "$user"; set user "$__KRONOS_CACHE_WINRM_USER"; end
+    if test -z "$user"; set user $TGT_USERNAME; end
+    if test -z "$user"; set user $TGT_CRED_USERNAME; end
+
+    if not set -q _flag_kerberos
+        set -l cached_auth "$__KRONOS_CACHE_WINRM_AUTH_VAL"
+        if string match -rq '^[a-fA-F0-9]{32}:[a-fA-F0-9]{32}$|^[a-fA-F0-9]{32}$' -- "$cached_auth"
+            if test -z "$hash"; set hash "$cached_auth"; end
+        else
+            if test -z "$pass"; set pass "$cached_auth"; end
         end
+        if test -z "$pass"; and test -z "$hash"; set pass $TGT_PASSWORD; end
+        if test -z "$pass"; and test -z "$hash"; set pass $TGT_CRED_PASSWORD; end
     end
 
     if test -z "$target"; echo "error: target is required"; return 1; end
 
     __kronos_check_dep evil-winrm; or return 1
 
-    set -l winrm_args -i $target
-    if test -n "$user"; set -a winrm_args -u $user; end
+    set -l cmd_list evil-winrm -i $target
+    if test -n "$user"; set -a cmd_list -u $user; end
 
     if set -q _flag_kerberos
-        set -a winrm_args -k
-        if test -n "$TGT_DC_REALM"; set -a winrm_args -r "$TGT_DC_REALM"; end
-        if test -n "$TGT_DC_IP"; set -a winrm_args -ip "$TGT_DC_IP"
-        else if test -n "$TGT_DC"; set -a winrm_args -ip "$TGT_DC"; end
+        set -a cmd_list -k
+        if test -n "$TGT_DC_REALM"; set -a cmd_list -r "$TGT_DC_REALM"; end
+        if test -n "$TGT_DC_IP"; set -a cmd_list -ip "$TGT_DC_IP"
+        else if test -n "$TGT_DC"; set -a cmd_list -ip "$TGT_DC"; end
     else if test -n "$hash"
-        set -a winrm_args -H $hash
+        set -a cmd_list -H $hash
     else
-        if test -n "$pass"; set -a winrm_args -p $pass; end
+        if test -n "$pass"; set -a cmd_list -p $pass; end
+    end
+
+    set -l cmd_str (string escape -- $cmd_list | string join " ")
+
+    if set -q _flag_edit_cmd
+        set cmd_str (__kronos_edit_cmd "$cmd_str"); or return 1
     end
 
     echo "[*] Connecting to $target via WinRM (evil-winrm)..."
-    command evil-winrm $winrm_args
+    eval $cmd_str
 end

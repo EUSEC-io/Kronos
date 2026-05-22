@@ -1,6 +1,6 @@
 # description: Connect to target using mssqlclient.py (MSSQL)
 function __kronos_mssql --description "Connect to target using mssqlclient.py (MSSQL)"
-    argparse h/help u/username= p/password= H/hash= d/domain= q/quiet w/wizard -- $argv
+    argparse h/help u/username= p/password= H/hash= d/domain= q/quiet w/wizard X/edit-cmd k/kerberos -- $argv
     or return 1
 
     if set -q _flag_help
@@ -14,6 +14,8 @@ function __kronos_mssql --description "Connect to target using mssqlclient.py (M
         echo "  -H, --hash HASH     Provide NTLM hash"
         echo "  -d, --domain DOMAIN Provide domain (falls back to \$TGT_DC_DOMAIN)"
         echo "  -q, --quiet         Skip prompts and use cached/default values"
+        echo "  -X, --edit-cmd      Edit the command before execution"
+        echo "  -k, --kerberos      Use Kerberos authentication"
         echo "  -h, --help          Show this help message"
         return 0
     end
@@ -93,6 +95,8 @@ function __kronos_mssql --description "Connect to target using mssqlclient.py (M
     else if command -v impacket-mssqlclient >/dev/null; set impacket_cmd impacket-mssqlclient
     else; echo "error: mssqlclient not found. run 'kronos install'."; return 1; end
 
+    __kronos_check_dep $impacket_cmd; or return 1
+
     set -l mssql_args
     if set -q _flag_kerberos
         set -a mssql_args -k -no-pass "$target"
@@ -112,8 +116,15 @@ function __kronos_mssql --description "Connect to target using mssqlclient.py (M
         end
     end
 
-    __kronos_check_dep $impacket_cmd; or return 1
+    set -l cmd_str (string join " " -- command $impacket_cmd (string escape -- $mssql_args))
 
-    echo "[*] Connecting to $target via MSSQL ($impacket_cmd)..."
-    command $impacket_cmd $mssql_args
+    if set -q _flag_edit_cmd
+        set cmd_str (__kronos_edit_cmd "$cmd_str"); or return 1
+    end
+
+    if not set -q _flag_quiet
+        echo "[*] Connecting to $target via MSSQL ($impacket_cmd)..."
+    end
+
+    eval $cmd_str
 end

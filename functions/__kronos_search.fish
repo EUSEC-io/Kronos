@@ -1,6 +1,6 @@
 # description: Search and enumerate AD objects using bloodyAD
 function __kronos_search --description "Search and enumerate AD objects using bloodyAD"
-    argparse h/help q/quiet u/username= p/password= k/kerberos query= a/attr= w/wizard -- $argv
+    argparse h/help q/quiet u/username= p/password= k/kerberos query= a/attr= w/wizard X/edit-cmd -- $argv
     or return 1
 
     if set -q _flag_help
@@ -14,6 +14,7 @@ function __kronos_search --description "Search and enumerate AD objects using bl
         echo "  -u, --username USER   Auth username"
         echo "  -p, --password PASS   Auth password"
         echo "  -k, --kerberos        Use Kerberos authentication"
+        echo "  -X, --edit-cmd        Edit the command before execution"
         echo "  -q, --quiet           Skip prompts and use fallbacks"
         echo "  -h, --help            Show this help message"
         return 0
@@ -45,12 +46,13 @@ function __kronos_search --description "Search and enumerate AD objects using bl
 
     # Interactive Fallback
     if not set -q _flag_quiet
-        if test -z "$target"; or set -q _flag_wizard
+        if test (count $argv) -eq 0; or set -q _flag_wizard
             set target (__kronos_ask "Target DC IP/Hostname" "$target"); or return 1
             set -U __KRONOS_CACHE_SEARCH_TARGET "$target"
-        end
-        if test -z "$query"; and not set -q _flag_wizard
-             set query (__kronos_ask "Search Query" "*"); or return 1
+            
+            if test -z "$query"
+                 set query (__kronos_ask "Search Query" "*"); or return 1
+            end
         end
     end
 
@@ -62,26 +64,36 @@ function __kronos_search --description "Search and enumerate AD objects using bl
         return 1
     end
 
-    set -l cmd_str bloodyAD --host "$target" -d "$domain"
+    set -l cmd_list bloodyAD --host "$target" -d "$domain"
     if set -q _flag_kerberos
-        set -a cmd_str -k
+        set -a cmd_list -k
     else
         if test -z "$auth_user"
             echo "error: auth credentials required" >&2
             return 1
         end
-        set -a cmd_str -u "$auth_user" -p "$auth_pass"
+        set -a cmd_list -u "$auth_user" -p "$auth_pass"
     end
 
     if test -z "$query"; set query "*"; end
 
-    set -a cmd_str get object "$query"
+    set -a cmd_list get object "$query"
     if set -q _flag_attr
-        set -a cmd_str --attr "$_flag_attr"
+        set -a cmd_list --attr "$_flag_attr"
     end
 
     __kronos_check_dep bloodyAD; or return 1
 
+    set -l cmd_str ""
+    for part in $cmd_list
+        set cmd_str "$cmd_str "(string escape -- $part)
+    end
+    set cmd_str (string trim $cmd_str)
+
+    if set -q _flag_edit_cmd
+        set cmd_str (__kronos_edit_cmd "$cmd_str"); or return 1
+    end
+
     echo "[*] Searching for '$query' in AD..."
-    command $cmd_str
+    eval $cmd_str
 end

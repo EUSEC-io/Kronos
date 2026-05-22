@@ -1,6 +1,6 @@
 # description: Query domain info and password policy
 function __kronos_dominfo --description "Query domain info and password policy"
-    argparse h/help q/quiet P/pass-policy u/username= p/password= N/NULL k/kerberos w/wizard -- $argv
+    argparse h/help q/quiet P/pass-policy u/username= p/password= N/NULL k/kerberos X/edit-cmd w/wizard -- $argv
     or return 1
 
     if set -q _flag_help
@@ -14,6 +14,7 @@ function __kronos_dominfo --description "Query domain info and password policy"
         echo "  -p, --password PASS Auth password"
         echo "  -N, --NULL          Force NULL session enumeration"
         echo "  -k, --kerberos      Use Kerberos authentication"
+        echo "  -X, --edit-cmd      Inspect and edit the command before execution"
         echo "  -q, --quiet         Skip prompts and use fallbacks"
         echo "  -h, --help          Show this help message"
         return 0
@@ -65,21 +66,25 @@ function __kronos_dominfo --description "Query domain info and password policy"
 
     if test "$has_creds" -eq 1
         __kronos_check_dep nxc; or return 1
-        set -l nxc_cmd nxc smb $target
-        if test -n "$TGT_DC_DOMAIN"; set -a nxc_cmd -d $TGT_DC_DOMAIN; end
+        set -l nxc_cmd "nxc smb $target"
+        if test -n "$TGT_DC_DOMAIN"; set nxc_cmd "$nxc_cmd -d $TGT_DC_DOMAIN"; end
         
         if set -q _flag_kerberos
-            set -a nxc_cmd -k -u "$auth_user" -p ""
+            set nxc_cmd "$nxc_cmd -k -u \"$auth_user\" -p \"\""
         else
-            set -a nxc_cmd -u "$auth_user" -p "$auth_pass"
+            set nxc_cmd "$nxc_cmd -u \"$auth_user\" -p \"$auth_pass\""
         end
 
         if set -q _flag_pass_policy
-            set -a nxc_cmd --pass-pol
+            set nxc_cmd "$nxc_cmd --pass-pol"
         end
         
+        if set -q _flag_edit_cmd
+            set nxc_cmd (__kronos_edit_cmd "$nxc_cmd"); or return 1
+        end
+
         echo "[*] Querying dominfo via nxc smb..."
-        command $nxc_cmd
+        eval $nxc_cmd
     else
         __kronos_check_dep rpcclient; or return 1
         set -l rpc_cmds "querydominfo"
@@ -87,7 +92,13 @@ function __kronos_dominfo --description "Query domain info and password policy"
             set rpc_cmds "$rpc_cmds; getdompwinfo"
         end
         
+        set -l rpc_cmd "rpcclient -U \"\" -N \"$target\" -c \"$rpc_cmds\""
+        
+        if set -q _flag_edit_cmd
+            set rpc_cmd (__kronos_edit_cmd "$rpc_cmd"); or return 1
+        end
+
         echo "[*] Querying dominfo via rpcclient (null session)..."
-        command rpcclient -U "" -N "$target" -c "$rpc_cmds"
+        eval $rpc_cmd
     end
 end

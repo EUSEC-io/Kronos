@@ -1,6 +1,6 @@
 # description: Run kerbrute userenum
 function __kronos_userenum --description "Run kerbrute userenum"
-    argparse h/help w/wordlist= -- $argv
+    argparse h/help w/wordlist= X/edit-cmd -- $argv
     or return 1
 
     if set -q _flag_help
@@ -13,6 +13,7 @@ function __kronos_userenum --description "Run kerbrute userenum"
         echo ""
         echo "Options:"
         echo "  -w, --wordlist FILE Path to a custom wordlist"
+        echo "  -X, --edit-cmd      Inspect and edit the command before execution"
         echo "  -h, --help          Show this help message"
         return 0
     end
@@ -59,8 +60,13 @@ function __kronos_userenum --description "Run kerbrute userenum"
 
     __kronos_check_dep $kerbrute_bin; or return 1
 
-    echo "[*] Running $kerbrute_bin userenum against $target ($domain)..."
-    command $kerbrute_bin userenum --dc $target -d $domain -o .kerbrute_out.txt $userlist
+    set -l cmd_str "$kerbrute_bin userenum --dc $target -d $domain -o .kerbrute_out.txt $userlist"
+    if set -q _flag_edit_cmd
+        set cmd_str (__kronos_edit_cmd "$cmd_str"); or return 1
+    end
+
+    echo "[*] Running kerbrute userenum against $target ($domain)..."
+    eval $cmd_str
     
     if test -f .kerbrute_out.txt
         echo "[*] Extracting valid users to valid_users.txt..."

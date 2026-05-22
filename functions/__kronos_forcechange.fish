@@ -1,11 +1,6 @@
 # description: Force change a user's password using bloodyAD
 function __kronos_forcechange --description "Force change a user's password using bloodyAD"
-    set -l wizard 0
-    if test (count $argv) -eq 0
-        set wizard 1
-    end
-
-    argparse h/help u/username= p/password= H/hash= t/target-user= P/new-password= k/kerberos q/quiet -- $argv
+    argparse h/help u/username= p/password= H/hash= t/target-user= P/new-password= k/kerberos q/quiet w/wizard X/edit-cmd -- $argv
     or return 1
 
     if set -q _flag_help
@@ -20,6 +15,7 @@ function __kronos_forcechange --description "Force change a user's password usin
         echo "  -p, --password PASS Auth password"
         echo "  -H, --hash HASH     Auth NTLM hash"
         echo "  -k, --kerberos      Use Kerberos authentication"
+        echo "  -X, --edit-cmd      Edit the command before execution"
         echo "  -q, --quiet         Skip prompts and use cached/default values"
         echo "  -h, --help          Show this help message"
         return 0
@@ -58,43 +54,45 @@ function __kronos_forcechange --description "Force change a user's password usin
     end
 
     if not set -q _flag_quiet
-        set_color cyan; echo "[*] Starting Force Password Change wizard..."; set_color normal
+        if test (count $argv) -eq 0; or set -q _flag_wizard
+            set_color cyan; echo "[*] Starting Force Password Change wizard..."; set_color normal
 
-        set target (__kronos_ask "Target DC IP/Hostname" "$target"); or return 1
-        set -U __KRONOS_CACHE_FORCEPASS_TARGET "$target"
+            set target (__kronos_ask "Target DC IP/Hostname" "$target"); or return 1
+            set -U __KRONOS_CACHE_FORCEPASS_TARGET "$target"
 
-        set target_user (__kronos_ask "User to Reset" "$target_user"); or return 1
-        set -U __KRONOS_CACHE_FORCEPASS_USER "$target_user"
+            set target_user (__kronos_ask "User to Reset" "$target_user"); or return 1
+            set -U __KRONOS_CACHE_FORCEPASS_USER "$target_user"
 
-        set new_pass (__kronos_ask "New Password" "$new_pass"); or return 1
-        set -U __KRONOS_CACHE_FORCEPASS_NEW_PASS "$new_pass"
+            set new_pass (__kronos_ask "New Password" "$new_pass"); or return 1
+            set -U __KRONOS_CACHE_FORCEPASS_NEW_PASS "$new_pass"
 
-        if not set -q _flag_kerberos
-            set auth_user (__kronos_ask "Auth Username" "$auth_user"); or return 1
-            set -U __KRONOS_CACHE_FORCEPASS_AUTH_USER "$auth_user"
+            if not set -q _flag_kerberos
+                set auth_user (__kronos_ask "Auth Username" "$auth_user"); or return 1
+                set -U __KRONOS_CACHE_FORCEPASS_AUTH_USER "$auth_user"
 
-            set -l def_auth_val "$auth_pass"
-            if test -n "$auth_hash"; set def_auth_val "$auth_hash"; end
-            set -l auth_input (__kronos_ask "Auth Password or Hash" "$def_auth_val"); or return 1
-            set -U __KRONOS_CACHE_FORCEPASS_AUTH_VAL "$auth_input"
-            
-            if string match -rq '^[a-fA-F0-9]{32}:[a-fA-F0-9]{32}$|^[a-fA-F0-9]{32}$' -- "$auth_input"
-                set auth_hash "$auth_input"; set auth_pass ""
-            else
-                set auth_pass "$auth_input"; set auth_hash ""
+                set -l def_auth_val "$auth_pass"
+                if test -n "$auth_hash"; set def_auth_val "$auth_hash"; end
+                set -l auth_input (__kronos_ask "Auth Password or Hash" "$def_auth_val"); or return 1
+                set -U __KRONOS_CACHE_FORCEPASS_AUTH_VAL "$auth_input"
+                
+                if string match -rq '^[a-fA-F0-9]{32}:[a-fA-F0-9]{32}$|^[a-fA-F0-9]{32}$' -- "$auth_input"
+                    set auth_hash "$auth_input"; set auth_pass ""
+                else
+                    set auth_pass "$auth_input"; set auth_hash ""
+                end
             end
-        end
 
-        # Confirmation
-        echo ""
-        echo "Configuration:"
-        echo "  Target:   $target"
-        echo "  Reset:    $target_user"
-        echo "  Auth:     "(set -q _flag_kerberos; and echo "Kerberos"; or echo "$auth_user")
-        echo ""
-        if test (__kronos_ask_confirm "Force reset password for '$target_user' on $target?" n) != "yes"
-            echo "Aborted."
-            return 1
+            # Confirmation
+            echo ""
+            echo "Configuration:"
+            echo "  Target:   $target"
+            echo "  Reset:    $target_user"
+            echo "  Auth:     "(set -q _flag_kerberos; and echo "Kerberos"; or echo "$auth_user")
+            echo ""
+            if test (__kronos_ask_confirm "Force reset password for '$target_user' on $target?" n) != "yes"
+                echo "Aborted."
+                return 1
+            end
         end
     end
 
@@ -108,26 +106,36 @@ function __kronos_forcechange --description "Force change a user's password usin
         return 1
     end
 
-    set -l cmd_str bloodyAD --host "$target" -d "$domain"
+    set -l cmd_list bloodyAD --host "$target" -d "$domain"
     if set -q _flag_kerberos
-        set -a cmd_str -k
+        set -a cmd_list -k
     else
         if test -z "$auth_user"
             echo "error: auth credentials required" >&2
             return 1
         end
-        set -a cmd_str -u "$auth_user"
+        set -a cmd_list -u "$auth_user"
         if test -n "$auth_hash"
-            set -a cmd_str -p ":$auth_hash"
+            set -a cmd_list -p ":$auth_hash"
         else
-            set -a cmd_str -p "$auth_pass"
+            set -a cmd_list -p "$auth_pass"
         end
     end
 
-    set -a cmd_str set password "$target_user" "$new_pass"
+    set -a cmd_list set password "$target_user" "$new_pass"
 
     __kronos_check_dep bloodyAD; or return 1
 
+    set -l cmd_str ""
+    for part in $cmd_list
+        set cmd_str "$cmd_str "(string escape -- $part)
+    end
+    set cmd_str (string trim $cmd_str)
+
+    if set -q _flag_edit_cmd
+        set cmd_str (__kronos_edit_cmd "$cmd_str"); or return 1
+    end
+
     echo "[*] Force-changing password for $target_user via bloodyAD..."
-    command $cmd_str
+    eval $cmd_str
 end

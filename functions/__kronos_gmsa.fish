@@ -1,6 +1,6 @@
 # description: Read GMSA passwords using nxc ldap
 function __kronos_gmsa --description "Read GMSA passwords using nxc ldap"
-    argparse h/help q/quiet u/username= p/password= H/hash= k/kerberos w/wizard -- $argv
+    argparse h/help q/quiet u/username= p/password= H/hash= k/kerberos X/edit-cmd w/wizard -- $argv
     or return 1
 
     if set -q _flag_help
@@ -13,6 +13,7 @@ function __kronos_gmsa --description "Read GMSA passwords using nxc ldap"
         echo "  -p, --password PASS Auth password"
         echo "  -H, --hash HASH     Auth NTLM hash"
         echo "  -k, --kerberos      Use Kerberos authentication"
+        echo "  -X, --edit-cmd      Inspect and edit the command before execution"
         echo "  -q, --quiet         Skip prompts and use fallbacks"
         echo "  -h, --help          Show this help message"
         return 0
@@ -21,6 +22,7 @@ function __kronos_gmsa --description "Read GMSA passwords using nxc ldap"
     set -l target $argv[1]
     set -l auth_user $_flag_username
     set -l auth_pass $_flag_password
+    set -l auth_hash $_flag_hash
 
     # Load defaults for prompts
     if test -z "$target"
@@ -34,10 +36,15 @@ function __kronos_gmsa --description "Read GMSA passwords using nxc ldap"
         if test -z "$auth_user"; set auth_user $TGT_USERNAME; end
         if test -z "$auth_user"; set auth_user $TGT_CRED_USERNAME; end
     end
-    if test -z "$auth_pass"
-        set auth_pass $__KRONOS_CACHE_GMSA_AUTH_PASS
-        if test -z "$auth_pass"; set auth_pass $TGT_PASSWORD; end
-        if test -z "$auth_pass"; set auth_pass $TGT_CRED_PASSWORD; end
+    if test -z "$auth_pass"; and test -z "$auth_hash"
+        set -l cached_auth "$__KRONOS_CACHE_GMSA_AUTH_VAL"
+        if string match -rq '^[a-fA-F0-9]{32}:[a-fA-F0-9]{32}$|^[a-fA-F0-9]{32}$' -- "$cached_auth"
+            set auth_hash "$cached_auth"
+        else
+            set auth_pass "$cached_auth"
+        end
+        if test -z "$auth_pass"; and test -z "$auth_hash"; set auth_pass $TGT_PASSWORD; end
+        if test -z "$auth_pass"; and test -z "$auth_hash"; set auth_pass $TGT_CRED_PASSWORD; end
     end
 
     # Interactive Wizard
@@ -52,42 +59,45 @@ function __kronos_gmsa --description "Read GMSA passwords using nxc ldap"
             set -U __KRONOS_CACHE_GMSA_AUTH_USER "$auth_user"
 
             set -l def_auth_val "$auth_pass"
-            if test -n "$_flag_hash"; set def_auth_val "$_flag_hash"; end
+            if test -n "$auth_hash"; set def_auth_val "$auth_hash"; end
             set -l auth_input (__kronos_ask "Auth Password or Hash" "$def_auth_val"); or return 1
-            set -U __KRONOS_CACHE_GMSA_AUTH_PASS "$auth_input"
+            set -U __KRONOS_CACHE_GMSA_AUTH_VAL "$auth_input"
             
             if string match -rq '^[a-fA-F0-9]{32}:[a-fA-F0-9]{32}$|^[a-fA-F0-9]{32}$' -- "$auth_input"
-                set _flag_hash "$auth_input"; set auth_pass ""
+                set auth_hash "$auth_input"; set auth_pass ""
             else
-                set auth_pass "$auth_input"; set _flag_hash ""
+                set auth_pass "$auth_input"; set auth_hash ""
             end
         end
     end
 
     if test -z "$target"; echo "error: target is required" >&2; return 1; end
 
-    set -l nxc_cmd nxc ldap "$target"
-    if test -n "$TGT_DC_DOMAIN"; set -a nxc_cmd -d "$TGT_DC_DOMAIN"; end
+    set -l nxc_cmd "nxc ldap $target"
+    if test -n "$TGT_DC_DOMAIN"; set nxc_cmd "$nxc_cmd -d $TGT_DC_DOMAIN"; end
 
     if set -q _flag_kerberos
-        set -a nxc_cmd -k -u "$auth_user" -p ''
+        set nxc_cmd "$nxc_cmd -k -u \"$auth_user\" -p ''"
     else
         if test -z "$auth_user"
-            echo "error: credentials required" >&2
-            return 1
+            echo "error: credentials required"; return 1
         end
-        set -a nxc_cmd -u "$auth_user"
-        if test -n "$_flag_hash"
-            set -a nxc_cmd -H "$_flag_hash"
+        set nxc_cmd "$nxc_cmd -u \"$auth_user\""
+        if test -n "$auth_hash"
+            set nxc_cmd "$nxc_cmd -H \"$auth_hash\""
         else
-            set -a nxc_cmd -p "$auth_pass"
+            set nxc_cmd "$nxc_cmd -p \"$auth_pass\""
         end
     end
 
-    set -a nxc_cmd --gmsa
+    set nxc_cmd "$nxc_cmd --gmsa"
+
+    if set -q _flag_edit_cmd
+        set nxc_cmd (__kronos_edit_cmd "$nxc_cmd"); or return 1
+    end
 
     __kronos_check_dep nxc; or return 1
 
     echo "[*] Reading GMSA passwords via nxc ldap..."
-    command $nxc_cmd
+    eval $nxc_cmd
 end

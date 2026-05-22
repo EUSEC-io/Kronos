@@ -1,6 +1,6 @@
 # description: Create a new AD computer account using addcomputer.py
 function __kronos_add_computer --description "Create a new AD computer account using addcomputer.py"
-    argparse h/help u/username= p/password= H/hash= k/kerberos C/computer= P/computer-pass= q/quiet w/wizard -- $argv
+    argparse h/help u/username= p/password= H/hash= k/kerberos C/computer= P/computer-pass= q/quiet w/wizard X/edit-cmd -- $argv
     or return 1
 
     if set -q _flag_help
@@ -15,6 +15,7 @@ function __kronos_add_computer --description "Create a new AD computer account u
         echo "  -p, --password PASS     Auth password"
         echo "  -H, --hash HASH         Auth NTLM hash"
         echo "  -k, --kerberos          Use Kerberos authentication"
+        echo "  -X, --edit-cmd          Edit the command before execution"
         echo "  -q, --quiet             Skip all prompts and use fallbacks/cached values"
         echo "  -h, --help              Show this help message"
         return 0
@@ -53,43 +54,45 @@ function __kronos_add_computer --description "Create a new AD computer account u
     end
 
     if not set -q _flag_quiet
-        set_color cyan; echo "[*] Starting Add Computer wizard..."; set_color normal
+        if test (count $argv) -eq 0; or set -q _flag_wizard
+            set_color cyan; echo "[*] Starting Add Computer wizard..."; set_color normal
 
-        set target (__kronos_ask "Target DC IP/Hostname" "$target"); or return 1
-        set -U __KRONOS_CACHE_ADDCOMP_TARGET "$target"
+            set target (__kronos_ask "Target DC IP/Hostname" "$target"); or return 1
+            set -U __KRONOS_CACHE_ADDCOMP_TARGET "$target"
 
-        set computer (__kronos_ask "Computer Name" "$computer"); or return 1
-        set -U __KRONOS_CACHE_ADDCOMP_NAME "$computer"
+            set computer (__kronos_ask "Computer Name" "$computer"); or return 1
+            set -U __KRONOS_CACHE_ADDCOMP_NAME "$computer"
 
-        set computer_pass (__kronos_ask "Computer Password (optional)" "$computer_pass")
-        set -U __KRONOS_CACHE_ADDCOMP_PASS "$computer_pass"
+            set computer_pass (__kronos_ask "Computer Password (optional)" "$computer_pass")
+            set -U __KRONOS_CACHE_ADDCOMP_PASS "$computer_pass"
 
-        if not set -q _flag_kerberos
-            set auth_user (__kronos_ask "Auth Username" "$auth_user"); or return 1
-            set -U __KRONOS_CACHE_ADDCOMP_AUTH_USER "$auth_user"
+            if not set -q _flag_kerberos
+                set auth_user (__kronos_ask "Auth Username" "$auth_user"); or return 1
+                set -U __KRONOS_CACHE_ADDCOMP_AUTH_USER "$auth_user"
 
-            set -l def_auth_val "$auth_pass"
-            if test -n "$auth_hash"; set def_auth_val "$auth_hash"; end
-            set -l auth_input (__kronos_ask "Auth Password or Hash" "$def_auth_val"); or return 1
-            set -U __KRONOS_CACHE_ADDCOMP_AUTH_VAL "$auth_input"
-            
-            if string match -rq '^[a-fA-F0-9]{32}:[a-fA-F0-9]{32}$|^[a-fA-F0-9]{32}$' -- "$auth_input"
-                set auth_hash "$auth_input"; set auth_pass ""
-            else
-                set auth_pass "$auth_input"; set auth_hash ""
+                set -l def_auth_val "$auth_pass"
+                if test -n "$auth_hash"; set def_auth_val "$auth_hash"; end
+                set -l auth_input (__kronos_ask "Auth Password or Hash" "$def_auth_val"); or return 1
+                set -U __KRONOS_CACHE_ADDCOMP_AUTH_VAL "$auth_input"
+                
+                if string match -rq '^[a-fA-F0-9]{32}:[a-fA-F0-9]{32}$|^[a-fA-F0-9]{32}$' -- "$auth_input"
+                    set auth_hash "$auth_input"; set auth_pass ""
+                else
+                    set auth_pass "$auth_input"; set auth_hash ""
+                end
             end
-        end
 
-        # Confirmation
-        echo ""
-        echo "Configuration:"
-        echo "  Target:   $target"
-        echo "  Computer: $computer"
-        echo "  Auth:     "(set -q _flag_kerberos; and echo "Kerberos"; or echo "$auth_user")
-        echo ""
-        if test (__kronos_ask_confirm "Create computer account '$computer' on $target?" n) != "yes"
-            echo "Aborted."
-            return 1
+            # Confirmation
+            echo ""
+            echo "Configuration:"
+            echo "  Target:   $target"
+            echo "  Computer: $computer"
+            echo "  Auth:     "(set -q _flag_kerberos; and echo "Kerberos"; or echo "$auth_user")
+            echo ""
+            if test (__kronos_ask_confirm "Create computer account '$computer' on $target?" n) != "yes"
+                echo "Aborted."
+                return 1
+            end
         end
     end
 
@@ -122,6 +125,15 @@ function __kronos_add_computer --description "Create a new AD computer account u
 
     __kronos_check_dep $impacket_cmd; or return 1
 
+    set -l cmd_str "$impacket_cmd"
+    for arg in $add_args
+        set cmd_str "$cmd_str "(string escape -- $arg)
+    end
+
+    if set -q _flag_edit_cmd
+        set cmd_str (__kronos_edit_cmd "$cmd_str"); or return 1
+    end
+
     echo "[*] Creating computer account $computer via $impacket_cmd..."
-    command $impacket_cmd $add_args
+    eval $cmd_str
 end

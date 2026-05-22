@@ -5,7 +5,7 @@ function __kronos_ingest --description "Ingest Active Directory data using blood
         set wizard 1
     end
 
-    argparse h/help q/quiet u/username= p/password= H/hash= o/output= d/domain= k/kerberos w/wizard -- $argv
+    argparse h/help q/quiet u/username= p/password= H/hash= o/output= d/domain= k/kerberos X/edit-cmd w/wizard -- $argv
     or return 1
 
     if set -q _flag_help
@@ -20,6 +20,7 @@ function __kronos_ingest --description "Ingest Active Directory data using blood
         echo "  -o, --output FILE   Output zip filename"
         echo "  -d, --domain DOMAIN Target domain"
         echo "  -k, --kerberos      Use Kerberos authentication"
+        echo "  -X, --edit-cmd      Inspect and edit the command before execution"
         echo "  -q, --quiet         Skip prompts and use cached/default values"
         echo "  -h, --help          Show this help message"
         return 0
@@ -92,25 +93,29 @@ function __kronos_ingest --description "Ingest Active Directory data using blood
     if test -z "$domain"; echo "error: domain is required"; return 1; end
     if test -z "$outfile"; set outfile "$domain-bloodhound.zip"; end
 
-    set -l bh_args -d "$domain" -ns "$target" -c All
+    set -l bh_cmd "bloodhound-python -d \"$domain\" -ns \"$target\" -c All"
     if set -q _flag_kerberos
-        set -a bh_args -k
+        set bh_cmd "$bh_cmd -k"
     else
         if test -z "$auth_user"
             echo "error: username is required"; return 1
         end
-        set -a bh_args -u "$auth_user"
+        set bh_cmd "$bh_cmd -u \"$auth_user\""
         if test -n "$auth_hash"
-            set -a bh_args --hashes "$auth_hash"
+            set bh_cmd "$bh_cmd --hashes \"$auth_hash\""
         else
-            set -a bh_args -p "$auth_pass"
+            set bh_cmd "$bh_cmd -p \"$auth_pass\""
         end
+    end
+
+    if set -q _flag_edit_cmd
+        set bh_cmd (__kronos_edit_cmd "$bh_cmd"); or return 1
     end
 
     __kronos_check_dep bloodhound-python; or return 1
 
     echo "[*] Running bloodhound-python against $target ($domain)..."
-    command bloodhound-python $bh_args
+    eval $bh_cmd
     set -l bh_status $status
 
     if test $bh_status -eq 0
