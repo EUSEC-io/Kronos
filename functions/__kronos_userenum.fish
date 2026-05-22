@@ -1,6 +1,6 @@
 # description: Run kerbrute userenum
 function __kronos_userenum --description "Run kerbrute userenum"
-    argparse h/help w/wordlist= X/edit-cmd -- $argv
+    argparse h/help q/quiet w/wordlist= X/edit-cmd w/wizard -- $argv
     or return 1
 
     if set -q _flag_help
@@ -14,33 +14,45 @@ function __kronos_userenum --description "Run kerbrute userenum"
         echo "Options:"
         echo "  -w, --wordlist FILE Path to a custom wordlist"
         echo "  -X, --edit-cmd      Inspect and edit the command before execution"
+        echo "  -q, --quiet         Skip prompts and use fallbacks"
         echo "  -h, --help          Show this help message"
         return 0
     end
 
     set -l target $argv[1]
-    if test -z "$target"; set target $TGT_DC_IP; end
-    if test -z "$target"; set target $TGT_DC; end
-    if test -z "$target"; set target $TGT; end
-    
+    set -l userlist $_flag_wordlist
+
+    # Load defaults
     if test -z "$target"
-        echo "error: target is required (pass as argument or set \$TGT_DC_IP / \$TGT)" >&2
-        return 1
+        set target $__KRONOS_CACHE_USERENUM_TARGET
+        if test -z "$target"; set target $TGT_DC_IP; end
+        if test -z "$target"; set target $TGT_DC; end
+        if test -z "$target"; set target $TGT; end
     end
+    if test -z "$userlist"
+        set userlist $__KRONOS_CACHE_USERENUM_USERLIST
+        if test -z "$userlist"; set userlist "/usr/share/seclists/Usernames/xato-net-10-million-usernames.txt"; end
+    end
+
+    # Interactive Wizard
+    if not set -q _flag_quiet
+        if test (count $argv) -eq 0; or set -q _flag_wizard
+            set_color cyan; echo "[*] Starting UserEnum wizard..."; set_color normal
+
+            set target (__kronos_ask "Target DC IP/Hostname" "$target"); or return 1
+            set -U __KRONOS_CACHE_USERENUM_TARGET "$target"
+
+            set userlist (__kronos_ask "User List Path" "$userlist"); or return 1
+            set -U __KRONOS_CACHE_USERENUM_USERLIST "$userlist"
+        end
+    end
+
+    if test -z "$target"; echo "error: target is required"; return 1; end
 
     set -l domain $TGT_DC_DOMAIN
     if test -z "$domain"
         echo "error: \$TGT_DC_DOMAIN is not set" >&2
         return 1
-    end
-
-    set -l userlist ""
-    if set -q _flag_wordlist
-        set userlist $_flag_wordlist
-    else if test -n "$KRONOS_USERLIST"
-        set userlist $KRONOS_USERLIST
-    else
-        set userlist "/usr/share/seclists/Usernames/xato-net-10-million-usernames.txt"
     end
 
     if not test -f "$userlist"
@@ -53,14 +65,12 @@ function __kronos_userenum --description "Run kerbrute userenum"
         if command -v kerbrute.py >/dev/null
             set kerbrute_bin kerbrute.py
         else
-            echo "error: kerbrute not found. run 'kronos install'." >&2
-            return 1
-        end
+            echo "error: kerbrute not found. run 'kronos install'."; return 1; end
     end
 
     __kronos_check_dep $kerbrute_bin; or return 1
 
-    set -l cmd_str "$kerbrute_bin userenum --dc $target -d $domain -o .kerbrute_out.txt $userlist"
+    set -l cmd_str "$kerbrute_bin userenum --dc \"$target\" -d \"$domain\" -o .kerbrute_out.txt \"$userlist\""
     if set -q _flag_edit_cmd
         set cmd_str (__kronos_edit_cmd "$cmd_str"); or return 1
     end
