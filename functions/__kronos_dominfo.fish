@@ -54,25 +54,33 @@ function __kronos_dominfo --description "Query domain info, users, groups, and s
     set -l list_shares 0
     if set -q _flag_shares; or contains shares $argv; set list_shares 1; end
 
-    # If no specific enumeration was requested, and we are not in wizard mode, default to everything? 
-    # No, let's keep it specific.
+    # Load defaults
+    if test -z "$target"
+        set -l def_target "$__KRONOS_CACHE_DOMINFO_TARGET"
+        set -l src_target "Cache"
+        if test -z "$def_target"
+            set def_target "$TGT"; set src_target "TGT"
+            if test -z "$def_target"; set def_target "$TGT_DC_IP"; set src_target "TGT_DC_IP"; end
+            if test -z "$def_target"; set def_target "$TGT_DC"; set src_target "TGT_DC"; end
+            if test -z "$def_target"; set def_target "$TGT_HOSTS[1]"; set src_target "TGT_HOSTS"; end
+        end
+        if test -n "$target"; set def_target "$target"; set src_target "CLI Arg"; end
+        
+        if not set -q _flag_quiet
+            if test "$wizard" -eq 1 -o -z "$target"; or set -q _flag_wizard
+                set_color cyan; echo "[*] Starting DomInfo wizard..."; set_color normal
+                set target (__kronos_ask "Target DC IP/Hostname" "$def_target" "$src_target"); or return 1
+                set -U __KRONOS_CACHE_DOMINFO_TARGET "$target"
+            else
+                set target "$def_target"
+            end
+        else
+            set target "$def_target"
+        end
+    end
 
     if not set -q _flag_quiet
-        if test "$wizard" -eq 1 -o -z "$target"; or set -q _flag_wizard
-            set_color cyan; echo "[*] Starting DomInfo wizard..."; set_color normal
-
-            set -l def_target "$__KRONOS_CACHE_DOMINFO_TARGET"
-            set -l src_target "Cache"
-            if test -z "$def_target"
-                set def_target "$TGT"; set src_target "TGT"
-                if test -z "$def_target"; set def_target "$TGT_DC_IP"; set src_target "TGT_DC_IP"; end
-                if test -z "$def_target"; set def_target "$TGT_DC"; set src_target "TGT_DC"; end
-                if test -z "$def_target"; set def_target "$TGT_HOSTS[1]"; set src_target "TGT_HOSTS"; end
-            end
-            if test -n "$target"; set def_target "$target"; set src_target "CLI Arg"; end
-            set target (__kronos_ask "Target DC IP/Hostname" "$def_target" "$src_target"); or return 1
-            set -U __KRONOS_CACHE_DOMINFO_TARGET "$target"
-
+        if test "$wizard" -eq 1; or set -q _flag_wizard
             set -l mode "NULL Session"
             if set -q _flag_kerberos; set mode "Kerberos"; end
             if test -n "$auth_user"; and test -n "$auth_pass"; set mode "Credentials"; end
@@ -136,8 +144,6 @@ function __kronos_dominfo --description "Query domain info, users, groups, and s
         end
     else
         # Quiet mode fallbacks
-        if test -z "$target"; set target "$__KRONOS_CACHE_DOMINFO_TARGET"; end
-        if test -z "$target"; set target $TGT; end
         if test -z "$auth_user"
             set auth_user "$TGT_USERNAME"
             if test -z "$auth_user"; set auth_user "$TGT_CRED_USERNAME"; end
@@ -158,67 +164,92 @@ function __kronos_dominfo --description "Query domain info, users, groups, and s
     if test "$has_creds" -eq 1
         __kronos_check_dep nxc; or return 1
         
-        # 1. SMB related enumeration
-        if test "$pass_pol" -eq 1 -o "$list_users" -eq 1 -o "$list_loggedon" -eq 1 -o "$list_shares" -eq 1
-            echo ""
-            set_color -o yellow; echo ">>> [ SECTION: SMB ENUMERATION ] <<<"; set_color normal
-            set -l nxc_smb_cmd "nxc smb $target"
-            if test -n "$TGT_DC_DOMAIN"; set nxc_smb_cmd "$nxc_smb_cmd -d $TGT_DC_DOMAIN"; end
-            
-            if set -q _flag_kerberos
-                set nxc_smb_cmd "$nxc_smb_cmd -k -u \"$auth_user\" -p \"\""
-            else
-                set nxc_smb_cmd "$nxc_smb_cmd -u \"$auth_user\" -p \"$auth_pass\""
-            end
-
-            if test "$pass_pol" -eq 1; set nxc_smb_cmd "$nxc_smb_cmd --pass-pol"; end
-            if test "$list_users" -eq 1; set nxc_smb_cmd "$nxc_smb_cmd --users"; end
-            if test "$list_loggedon" -eq 1; set nxc_smb_cmd "$nxc_smb_cmd --loggedon-users"; end
-            if test "$list_shares" -eq 1; set nxc_smb_cmd "$nxc_smb_cmd --shares"; end
-            
-            if set -q _flag_edit_cmd
-                set nxc_smb_cmd (__kronos_edit_cmd "$nxc_smb_cmd"); or return 1
-            end
-            eval $nxc_smb_cmd
+        # Define common base for NXC commands
+        set -l nxc_base "nxc smb $target"
+        if test -n "$TGT_DC_DOMAIN"; set nxc_base "$nxc_base -d $TGT_DC_DOMAIN"; end
+        if set -q _flag_kerberos
+            set nxc_base "$nxc_base -k -u \"$auth_user\" -p \"\""
+        else
+            set nxc_base "$nxc_base -u \"$auth_user\" -p \"$auth_pass\""
         end
 
-        # 2. LDAP related enumeration (Groups)
+        echo ""
+        set_color -o yellow; echo ">>> [ SECTION: DOMAIN ENUMERATION ] <<<"; set_color normal
+
+        # Individual Modules with descriptive lines
+        if test "$list_shares" -eq 1
+            echo ""; set_color cyan; echo "[*] Enumerating Shares Now ...."; set_color normal
+            set -l cmd "$nxc_base --shares"
+            if set -q _flag_edit_cmd; set cmd (__kronos_edit_cmd "$cmd"); or return 1; end
+            eval $cmd
+        end
+
+        if test "$list_users" -eq 1
+            echo ""; set_color cyan; echo "[*] Enumerating Domain Users Now ...."; set_color normal
+            set -l cmd "$nxc_base --users"
+            if set -q _flag_edit_cmd; set cmd (__kronos_edit_cmd "$cmd"); or return 1; end
+            eval $cmd
+        end
+
+        if test "$pass_pol" -eq 1
+            echo ""; set_color cyan; echo "[*] Enumerating Password Policy Now ...."; set_color normal
+            set -l cmd "$nxc_base --pass-pol"
+            if set -q _flag_edit_cmd; set cmd (__kronos_edit_cmd "$cmd"); or return 1; end
+            eval $cmd
+        end
+
+        if test "$list_loggedon" -eq 1
+            echo ""; set_color cyan; echo "[*] Enumerating Logged-on Users Now ...."; set_color normal
+            set -l cmd "$nxc_base --loggedon-users"
+            if set -q _flag_edit_cmd; set cmd (__kronos_edit_cmd "$cmd"); or return 1; end
+            eval $cmd
+        end
+
         if test "$list_groups" -eq 1
-            echo ""
-            set_color -o yellow; echo ">>> [ SECTION: LDAP ENUMERATION (Groups) ] <<<"; set_color normal
-            set -l nxc_ldap_cmd "nxc ldap $target"
-            if test -n "$TGT_DC_DOMAIN"; set nxc_ldap_cmd "$nxc_ldap_cmd -d $TGT_DC_DOMAIN"; end
-            
+            echo ""; set_color cyan; echo "[*] Enumerating Domain Groups Now ...."; set_color normal
+            # Groups is better over LDAP
+            set -l ldap_base "nxc ldap $target"
+            if test -n "$TGT_DC_DOMAIN"; set ldap_base "$ldap_base -d $TGT_DC_DOMAIN"; end
             if set -q _flag_kerberos
-                set nxc_ldap_cmd "$nxc_ldap_cmd -k -u \"$auth_user\" -p \"\""
+                set ldap_base "$ldap_base -k -u \"$auth_user\" -p \"\""
             else
-                set nxc_ldap_cmd "$nxc_ldap_cmd -u \"$auth_user\" -p \"$auth_pass\""
+                set ldap_base "$ldap_base -u \"$auth_user\" -p \"$auth_pass\""
             end
-
-            set nxc_ldap_cmd "$nxc_ldap_cmd --groups"
-
-            if set -q _flag_edit_cmd
-                set nxc_ldap_cmd (__kronos_edit_cmd "$nxc_ldap_cmd"); or return 1
-            end
-            eval $nxc_ldap_cmd
+            set -l cmd "$ldap_base --groups"
+            if set -q _flag_edit_cmd; set cmd (__kronos_edit_cmd "$cmd"); or return 1; end
+            eval $cmd
         end
     else
         __kronos_check_dep rpcclient; or return 1
         echo ""
         set_color -o yellow; echo ">>> [ SECTION: RPC NULL SESSION ENUMERATION ] <<<"; set_color normal
-        set -l rpc_cmds "querydominfo"
-        if test "$pass_pol" -eq 1; set rpc_cmds "$rpc_cmds; getdompwinfo"; end
-        if test "$list_users" -eq 1; set rpc_cmds "$rpc_cmds; enumdomusers"; end
-        if test "$list_groups" -eq 1; set rpc_cmds "$rpc_cmds; enumdomgroups"; end
-        if test "$list_shares" -eq 1; set rpc_cmds "$rpc_cmds; netshareenum"; end
-        
-        set -l rpc_cmd "rpcclient -U \"\" -N \"$target\" -c \"$rpc_cmds\""
-        
-        if set -q _flag_edit_cmd
-            set rpc_cmd (__kronos_edit_cmd "$rpc_cmd"); or return 1
+
+        if test "$pass_pol" -eq 1
+            echo ""; set_color cyan; echo "[*] Enumerating Password Policy Now ...."; set_color normal
+            set -l cmd "rpcclient -U \"\" -N \"$target\" -c \"querydominfo; getdompwinfo\""
+            if set -q _flag_edit_cmd; set cmd (__kronos_edit_cmd "$cmd"); or return 1; end
+            eval $cmd
         end
 
-        echo "[*] Querying domain info via rpcclient..."
-        eval $rpc_cmd
+        if test "$list_users" -eq 1
+            echo ""; set_color cyan; echo "[*] Enumerating Domain Users Now ...."; set_color normal
+            set -l cmd "rpcclient -U \"\" -N \"$target\" -c \"enumdomusers\""
+            if set -q _flag_edit_cmd; set cmd (__kronos_edit_cmd "$cmd"); or return 1; end
+            eval $cmd
+        end
+
+        if test "$list_groups" -eq 1
+            echo ""; set_color cyan; echo "[*] Enumerating Domain Groups Now ...."; set_color normal
+            set -l cmd "rpcclient -U \"\" -N \"$target\" -c \"enumdomgroups\""
+            if set -q _flag_edit_cmd; set cmd (__kronos_edit_cmd "$cmd"); or return 1; end
+            eval $cmd
+        end
+
+        if test "$list_shares" -eq 1
+            echo ""; set_color cyan; echo "[*] Enumerating Shares Now ...."; set_color normal
+            set -l cmd "rpcclient -U \"\" -N \"$target\" -c \"netshareenum\""
+            if set -q _flag_edit_cmd; set cmd (__kronos_edit_cmd "$cmd"); or return 1; end
+            eval $cmd
+        end
     end
 end
