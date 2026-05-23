@@ -1,7 +1,7 @@
 # description: Active Directory attack orchestrator
 function kronos --description "Active Directory attack orchestrator"
     set -l action $argv[1]
-    set -l commands userenum dominfo ingest connect search asrep-roast kerberoast lookupsid spray forcechange gmsa add-user add-member add-computer dacl secretsdump psexec rbcd shadow-credentials ticket convert request install reset help
+    set -l commands userenum dominfo dnsdump ingest connect search asrep-roast kerberoast lookupsid spray forcechange gmsa add-user add-member add-computer dacl secretsdump psexec rbcd shadow-credentials ticket convert request install reset help
 
     if test -z "$action"
         # Interactive Mode
@@ -28,6 +28,7 @@ function kronos --description "Active Directory attack orchestrator"
             switch "$sub"
                 case userenum;    __kronos_userenum --help
                 case dominfo;     __kronos_dominfo --help
+                case dnsdump;     __kronos_dnsdump --help
                 case ingest;      __kronos_ingest --help
                 case connect;     __kronos_connect --help
                 case search;      __kronos_search --help
@@ -67,6 +68,7 @@ function kronos --description "Active Directory attack orchestrator"
     switch "$action"
         case userenum;    __kronos_userenum $argv
         case dominfo;     __kronos_dominfo $argv
+        case dnsdump;     __kronos_dnsdump $argv
         case ingest;      __kronos_ingest $argv
         case connect;     __kronos_connect $argv
         case asrep-roast; __kronos_asrep_roast $argv
