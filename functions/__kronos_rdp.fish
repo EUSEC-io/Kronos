@@ -1,5 +1,10 @@
 # description: Connect to target using xfreerdp3 (RDP)
 function __kronos_rdp --description "Connect to target using xfreerdp3 (RDP)"
+    set -l wizard 0
+    if test (count $argv) -eq 0
+        set wizard 1
+    end
+
     argparse t/target= h/help X/edit-cmd u/username= p/password= H/hash= d/domain= q/quiet w/wizard -- $argv
     or return 1
 

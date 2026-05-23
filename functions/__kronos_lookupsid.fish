@@ -1,5 +1,10 @@
 # description: Enumerate SIDs for AD objects using lookupsid.py
 function __kronos_lookupsid --description "Enumerate SIDs for AD objects using lookupsid.py"
+    set -l wizard 0
+    if test (count $argv) -eq 0
+        set wizard 1
+    end
+
     argparse t/target= h/help q/quiet u/username= p/password= H/hash= d/domain= k/kerberos f/filter= D/domain-sid X/edit-cmd w/wizard -- $argv
     or return 1
 
@@ -31,7 +36,7 @@ function __kronos_lookupsid --description "Enumerate SIDs for AD objects using l
     set -l auth_hash $_flag_hash
 
     if not set -q _flag_quiet
-        if test (count $argv) -eq 0 -o -z "$target"; or set -q _flag_wizard
+        if test "$wizard" -eq 1 -o -z "$target"; or set -q _flag_wizard
             set_color cyan; echo "[*] Starting LookupSID wizard..."; set_color normal
 
             set -l def_target "$__KRONOS_CACHE_LOOKUPSID_TARGET"

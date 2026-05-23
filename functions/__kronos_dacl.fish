@@ -1,5 +1,10 @@
 # description: Manipulate AD object DACLs using bloodyAD
 function __kronos_dacl --description "Manipulate AD object DACLs using bloodyAD"
+    set -l wizard 0
+    if test (count $argv) -eq 0
+        set wizard 1
+    end
+
     argparse h/help u/username= p/password= k/kerberos t/target-object= m/member= a/action= p/permission= q/quiet w/wizard X/edit-cmd -- $argv
     or return 1
 

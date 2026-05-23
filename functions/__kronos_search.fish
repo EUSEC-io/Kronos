@@ -1,5 +1,10 @@
 # description: Search and enumerate AD objects using bloodyAD
 function __kronos_search --description "Search and enumerate AD objects using bloodyAD"
+    set -l wizard 0
+    if test (count $argv) -eq 0
+        set wizard 1
+    end
+
     argparse t/target= h/help q/quiet u/username= p/password= k/kerberos query= a/attr= w/wizard X/edit-cmd -- $argv
     or return 1
 
@@ -29,7 +34,7 @@ function __kronos_search --description "Search and enumerate AD objects using bl
     set -l auth_pass $_flag_password
 
     if not set -q _flag_quiet
-        if test (count $argv) -eq 0 -o -z "$target"; or set -q _flag_wizard
+        if test "$wizard" -eq 1 -o -z "$target"; or set -q _flag_wizard
             set_color cyan; echo "[*] Starting Search wizard..."; set_color normal
 
             set -l def_target "$__KRONOS_CACHE_SEARCH_TARGET"

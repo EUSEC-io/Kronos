@@ -1,5 +1,10 @@
 # description: Query domain info and password policy
 function __kronos_dominfo --description "Query domain info and password policy"
+    set -l wizard 0
+    if test (count $argv) -eq 0
+        set wizard 1
+    end
+
     argparse t/target= h/help q/quiet P/pass-policy u/username= p/password= N/NULL k/kerberos X/edit-cmd w/wizard -- $argv
     or return 1
 

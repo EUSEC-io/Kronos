@@ -1,5 +1,10 @@
 # description: Request TGT or ST and export KRB5CCNAME
 function __kronos_request --description "Request TGT or ST and export KRB5CCNAME"
+    set -l wizard 0
+    if test (count $argv) -eq 0
+        set wizard 1
+    end
+
     argparse t/target= h/help u/username= p/password= H/hash= s/spn= d/domain= X/edit-cmd q/quiet w/wizard -- $argv
     or return 1
 

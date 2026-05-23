@@ -1,5 +1,10 @@
 # description: Connect to target using smbclient (SMB)
 function __kronos_smb --description "Connect to target using smbclient (SMB)"
+    set -l wizard 0
+    if test (count $argv) -eq 0
+        set wizard 1
+    end
+
     argparse t/target= h/help X/edit-cmd u/username= p/password= H/hash= d/domain= k/kerberos s/share= q/quiet w/wizard -- $argv
     or return 1
 

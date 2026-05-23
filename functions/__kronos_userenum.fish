@@ -1,5 +1,10 @@
 # description: Run kerbrute userenum
 function __kronos_userenum --description "Run kerbrute userenum"
+    set -l wizard 0
+    if test (count $argv) -eq 0
+        set wizard 1
+    end
+
     argparse t/target= h/help q/quiet w/wordlist= X/edit-cmd w/wizard -- $argv
     or return 1
 

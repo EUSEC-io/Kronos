@@ -1,5 +1,10 @@
 # description: Create a new AD user using bloodyAD
 function __kronos_add_user --description "Create a new AD user using bloodyAD"
+    set -l wizard 0
+    if test (count $argv) -eq 0
+        set wizard 1
+    end
+
     argparse t/target= h/help q/quiet u/username= p/password= k/kerberos U/new-user= P/new-password= X/edit-cmd w/wizard -- $argv
     or return 1
 
@@ -27,7 +32,7 @@ function __kronos_add_user --description "Create a new AD user using bloodyAD"
     set -l auth_pass $_flag_password
 
     if not set -q _flag_quiet
-        if test (count $argv) -eq 0 -o -z "$target"; or set -q _flag_wizard
+        if test "$wizard" -eq 1 -o -z "$target"; or set -q _flag_wizard
             set_color cyan; echo "[*] Starting Add User wizard..."; set_color normal
 
             set -l def_target "$__KRONOS_CACHE_ADDUSER_TARGET"

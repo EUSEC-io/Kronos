@@ -1,5 +1,10 @@
 # description: Connect to target using ftp (FTP)
 function __kronos_ftp --description "Connect to target using ftp (FTP)"
+    set -l wizard 0
+    if test (count $argv) -eq 0
+        set wizard 1
+    end
+
     argparse t/target= h/help X/edit-cmd u/username= p/password= q/quiet w/wizard -- $argv
     or return 1
 

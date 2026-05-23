@@ -1,5 +1,10 @@
 # description: Create a new AD computer account using addcomputer.py
 function __kronos_add_computer --description "Create a new AD computer account using addcomputer.py"
+    set -l wizard 0
+    if test (count $argv) -eq 0
+        set wizard 1
+    end
+
     argparse t/target= h/help q/quiet u/username= p/password= H/hash= C/computer= P/computer-pass= k/kerberos X/edit-cmd w/wizard -- $argv
     or return 1
 
@@ -31,7 +36,7 @@ function __kronos_add_computer --description "Create a new AD computer account u
     set -l auth_hash $_flag_hash
 
     if not set -q _flag_quiet
-        if test (count $argv) -eq 0 -o -z "$target"; or set -q _flag_wizard
+        if test "$wizard" -eq 1 -o -z "$target"; or set -q _flag_wizard
             set_color cyan; echo "[*] Starting Add Computer wizard..."; set_color normal
 
             set -l def_target "$__KRONOS_CACHE_ADDCOMP_TARGET"

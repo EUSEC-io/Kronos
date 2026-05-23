@@ -1,5 +1,10 @@
 # description: Force change a user's password using bloodyAD
 function __kronos_forcechange --description "Force change a user's password using bloodyAD"
+    set -l wizard 0
+    if test (count $argv) -eq 0
+        set wizard 1
+    end
+
     argparse h/help u/username= p/password= H/hash= t/target-user= P/new-password= k/kerberos q/quiet target= w/wizard X/edit-cmd -- $argv
     or return 1
 
@@ -28,7 +33,7 @@ function __kronos_forcechange --description "Force change a user's password usin
     set -l auth_hash $_flag_hash
 
     if not set -q _flag_quiet
-        if test (count $argv) -eq 0 -o -z "$target"; or set -q _flag_wizard
+        if test "$wizard" -eq 1 -o -z "$target"; or set -q _flag_wizard
             set_color cyan; echo "[*] Starting Force Password Change wizard..."; set_color normal
 
             set -l def_target "$__KRONOS_CACHE_FORCEPASS_TARGET"

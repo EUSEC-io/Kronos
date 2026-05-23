@@ -1,5 +1,10 @@
 # description: Convert tickets between kirbi and ccache formats
 function __kronos_convert --description "Convert tickets between kirbi and ccache formats"
+    set -l wizard 0
+    if test (count $argv) -eq 0
+        set wizard 1
+    end
+
     argparse h/help q/quiet i/input= o/output= X/edit-cmd w/wizard -- $argv
     or return 1
 

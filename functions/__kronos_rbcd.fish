@@ -1,5 +1,10 @@
 # description: RBCD attack (msDS-AllowedToDelegateTo)
 function __kronos_rbcd --description "RBCD attack (msDS-AllowedToDelegateTo)"
+    set -l wizard 0
+    if test (count $argv) -eq 0
+        set wizard 1
+    end
+
     argparse t/target= h/help q/quiet u/username= p/password= k/kerberos target-computer= delegate-to= a/action= X/edit-cmd w/wizard -- $argv
     or return 1
 
@@ -31,7 +36,7 @@ function __kronos_rbcd --description "RBCD attack (msDS-AllowedToDelegateTo)"
     set -l auth_pass $_flag_password
 
     if not set -q _flag_quiet
-        if test (count $argv) -eq 0 -o -z "$target"; or set -q _flag_wizard
+        if test "$wizard" -eq 1 -o -z "$target"; or set -q _flag_wizard
             set_color cyan; echo "[*] Starting RBCD wizard..."; set_color normal
 
             set -l def_target "$__KRONOS_CACHE_RBCD_TARGET"

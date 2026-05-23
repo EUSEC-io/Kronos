@@ -1,5 +1,10 @@
 # description: Read GMSA passwords using nxc ldap
 function __kronos_gmsa --description "Read GMSA passwords using nxc ldap"
+    set -l wizard 0
+    if test (count $argv) -eq 0
+        set wizard 1
+    end
+
     argparse t/target= h/help q/quiet u/username= p/password= H/hash= k/kerberos X/edit-cmd w/wizard -- $argv
     or return 1
 

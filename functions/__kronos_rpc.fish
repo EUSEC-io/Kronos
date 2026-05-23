@@ -1,5 +1,10 @@
 # description: Connect to target using rpcclient (RPC)
 function __kronos_rpc --description "Connect to target using rpcclient (RPC)"
+    set -l wizard 0
+    if test (count $argv) -eq 0
+        set wizard 1
+    end
+
     argparse t/target= h/help q/quiet X/edit-cmd u/username= p/password= H/hash= d/domain= k/kerberos N/null w/wizard -- $argv
     or return 1
 
