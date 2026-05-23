@@ -141,29 +141,54 @@ function __kronos_dominfo --description "Query domain info, users, groups, and s
 
     if test "$has_creds" -eq 1
         __kronos_check_dep nxc; or return 1
-        set -l nxc_cmd "nxc smb $target"
-        if test -n "$TGT_DC_DOMAIN"; set nxc_cmd "$nxc_cmd -d $TGT_DC_DOMAIN"; end
         
-        if set -q _flag_kerberos
-            set nxc_cmd "$nxc_cmd -k -u \"$auth_user\" -p \"\""
-        else
-            set nxc_cmd "$nxc_cmd -u \"$auth_user\" -p \"$auth_pass\""
+        # 1. SMB related enumeration
+        if test "$pass_pol" -eq 1 -o "$list_users" -eq 1 -o "$list_loggedon" -eq 1 -o "$list_shares" -eq 1
+            set_color yellow; echo "--- [ SECTION: SMB ENUMERATION ] ---"; set_color normal
+            set -l nxc_smb_cmd "nxc smb $target"
+            if test -n "$TGT_DC_DOMAIN"; set nxc_smb_cmd "$nxc_smb_cmd -d $TGT_DC_DOMAIN"; end
+            
+            if set -q _flag_kerberos
+                set nxc_smb_cmd "$nxc_smb_cmd -k -u \"$auth_user\" -p \"\""
+            else
+                set nxc_smb_cmd "$nxc_smb_cmd -u \"$auth_user\" -p \"$auth_pass\""
+            end
+
+            if test "$pass_pol" -eq 1; set nxc_smb_cmd "$nxc_smb_cmd --pass-pol"; end
+            if test "$list_users" -eq 1; set nxc_smb_cmd "$nxc_smb_cmd --users"; end
+            if test "$list_loggedon" -eq 1; set nxc_smb_cmd "$nxc_smb_cmd --loggedon-users"; end
+            if test "$list_shares" -eq 1; set nxc_smb_cmd "$nxc_smb_cmd --shares"; end
+            
+            if set -q _flag_edit_cmd
+                set nxc_smb_cmd (__kronos_edit_cmd "$nxc_smb_cmd"); or return 1
+            end
+            eval $nxc_smb_cmd
+            echo ""
         end
 
-        if test "$pass_pol" -eq 1; set nxc_cmd "$nxc_cmd --pass-pol"; end
-        if test "$list_users" -eq 1; set nxc_cmd "$nxc_cmd --users"; end
-        if test "$list_groups" -eq 1; set nxc_cmd "$nxc_cmd --groups"; end
-        if test "$list_loggedon" -eq 1; set nxc_cmd "$nxc_cmd --loggedon-users"; end
-        if test "$list_shares" -eq 1; set nxc_cmd "$nxc_cmd --shares"; end
-        
-        if set -q _flag_edit_cmd
-            set nxc_cmd (__kronos_edit_cmd "$nxc_cmd"); or return 1
-        end
+        # 2. LDAP related enumeration (Groups)
+        if test "$list_groups" -eq 1
+            set_color yellow; echo "--- [ SECTION: LDAP ENUMERATION (Groups) ] ---"; set_color normal
+            set -l nxc_ldap_cmd "nxc ldap $target"
+            if test -n "$TGT_DC_DOMAIN"; set nxc_ldap_cmd "$nxc_ldap_cmd -d $TGT_DC_DOMAIN"; end
+            
+            if set -q _flag_kerberos
+                set nxc_ldap_cmd "$nxc_ldap_cmd -k -u \"$auth_user\" -p \"\""
+            else
+                set nxc_ldap_cmd "$nxc_ldap_cmd -u \"$auth_user\" -p \"$auth_pass\""
+            end
 
-        echo "[*] Querying domain info via nxc smb..."
-        eval $nxc_cmd
+            set nxc_ldap_cmd "$nxc_ldap_cmd --groups"
+
+            if set -q _flag_edit_cmd
+                set nxc_ldap_cmd (__kronos_edit_cmd "$nxc_ldap_cmd"); or return 1
+            end
+            eval $nxc_ldap_cmd
+            echo ""
+        end
     else
         __kronos_check_dep rpcclient; or return 1
+        set_color yellow; echo "--- [ SECTION: RPC NULL SESSION ENUMERATION ] ---"; set_color normal
         set -l rpc_cmds "querydominfo"
         if test "$pass_pol" -eq 1; set rpc_cmds "$rpc_cmds; getdompwinfo"; end
         if test "$list_users" -eq 1; set rpc_cmds "$rpc_cmds; enumdomusers"; end
@@ -176,7 +201,7 @@ function __kronos_dominfo --description "Query domain info, users, groups, and s
             set rpc_cmd (__kronos_edit_cmd "$rpc_cmd"); or return 1
         end
 
-        echo "[*] Querying domain info via rpcclient (null session)..."
+        echo "[*] Querying domain info via rpcclient..."
         eval $rpc_cmd
     end
 end
