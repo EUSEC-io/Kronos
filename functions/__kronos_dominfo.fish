@@ -83,8 +83,6 @@ function __kronos_dominfo --description "Query domain info and password policy"
             else
                 set pass_pol 0
             end
-        end
-    end
 
     if test -z "$target"; echo "error: target is required" >&2; return 1; end
 
@@ -130,4 +128,3 @@ function __kronos_dominfo --description "Query domain info and password policy"
         echo "[*] Querying dominfo via rpcclient (null session)..."
         eval $rpc_cmd
     end
-end

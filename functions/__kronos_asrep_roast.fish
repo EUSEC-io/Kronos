@@ -5,15 +5,16 @@ function __kronos_asrep_roast --description "Run AS-REP Roasting using GetNPUser
         set wizard 1
     end
 
-    argparse h/help u/username= d/domain= k/kerberos X/edit-cmd q/quiet -- $argv
+    argparse h/help u/username= d/domain= k/kerberos X/edit-cmd q/quiet t/target= w/wizard -- $argv
     or return 1
 
     if set -q _flag_help
-        echo "Usage: kronos asrep-roast [TARGET] [OPTIONS]"
+        echo "Usage: kronos asrep-roast [OPTIONS]"
         echo ""
         echo "Run AS-REP Roasting using impacket's GetNPUsers.py."
         echo ""
         echo "Options:"
+        echo "  -t, --target IP     Target IP or Hostname"
         echo "  -u, --username USER Provide username (falls back to \$TGT_CRED_USERNAME)"
         echo "  -d, --domain DOMAIN Target domain name (falls back to \$TGT_DC_DOMAIN)"
         echo "  -k, --kerberos      Use Kerberos authentication"
@@ -23,22 +24,21 @@ function __kronos_asrep_roast --description "Run AS-REP Roasting using GetNPUser
         return 0
     end
 
-    set -l target $argv[1]
+    set -l target $_flag_target
+    if test -z "$target"; set target $argv[1]; end
     set -l domain $_flag_domain
     set -l user $_flag_username
 
     if not set -q _flag_quiet
-        if test "$wizard" -eq 1 -o -n "$target"
+        if test "$wizard" -eq 1 -o -z "$target" -o set -q _flag_wizard
             set_color cyan; echo "[*] Starting AS-REP Roast wizard..."; set_color normal
 
             set -l def_target "$__KRONOS_CACHE_ASREP_TARGET"
             set -l src_target "Cache"
             if test -z "$def_target"
                 set def_target "$TGT_HOSTS[1]"; set src_target "TGT_HOSTS"
-                if test -z "$def_target"; set def_target "$TGT_HOSTS[1]"; set src_target "TGT_HOSTS"; if test -z "$def_target"; set def_target "$TGT_DC_IP"; set src_target "TGT_DC_IP"; end; end
+                if test -z "$def_target"; set def_target "$TGT_DC_IP"; set src_target "TGT_DC_IP"; end
                 if test -z "$def_target"; set def_target "$TGT_DC"; set src_target "TGT_DC"; end
-                if test -z "$def_target"; set def_target "$TGT"; set src_target "TGT"; end
-            end
                 if test -z "$def_target"; set def_target "$TGT"; set src_target "TGT"; end
             end
             if test -n "$target"; set def_target "$target"; set src_target "CLI Arg"; end

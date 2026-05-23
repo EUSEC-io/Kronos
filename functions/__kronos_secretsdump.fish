@@ -98,7 +98,6 @@ function __kronos_secretsdump --description "Dump AD secrets using secretsdump.p
                 else
                     set auth_pass "$auth_input"; set auth_hash ""
                 end
-            end
 
             # Confirmation
             echo ""
@@ -112,8 +111,6 @@ function __kronos_secretsdump --description "Dump AD secrets using secretsdump.p
                 echo "Aborted."
                 return 1
             end
-        end
-    end
 
     if test -z "$target"; echo "error: target is required"; return 1; end
     if test -z "$domain"; echo "error: domain is required"; return 1; end

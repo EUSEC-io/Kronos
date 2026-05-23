@@ -37,7 +37,6 @@ function __kronos_ticket --description "Create advanced AD tickets using tickete
         if test (count $argv) -gt 0; and test "$argv[1]" = "$subaction"
             set -e argv[1]
         end
-    end
 
     # Capture flags
     set -l domain $_flag_domain
@@ -179,7 +178,6 @@ function __kronos_ticket --description "Create advanced AD tickets using tickete
                 set groups (__kronos_ask "Group RIDs (comma-separated)" "$def_groups" "$src_groups"); or return 1
                 set -U __KRONOS_CACHE_GROUPS "$groups"
             end
-        end
 
         # 10. SPN (Silver/Trust)
         if test "$subaction" = "silver" -o "$subaction" = "trust"
@@ -217,7 +215,6 @@ function __kronos_ticket --description "Create advanced AD tickets using tickete
                 else
                     set auth_pass "$cached_auth"
                 end
-            end
             if test -z "$auth_pass"; and test -z "$auth_hash"; set auth_pass $TGT_PASSWORD; end
             if test -z "$auth_pass"; and test -z "$auth_hash"; set auth_pass $TGT_CRED_PASSWORD; end
 
@@ -228,12 +225,10 @@ function __kronos_ticket --description "Create advanced AD tickets using tickete
                     set user_id "$__KRONOS_CACHE_USER_ID"
                     if test -z "$user_id"; set user_id "500"; end
                 end
-            end
 
             if test "$subaction" = "diamond" -a -z "$groups"; set groups "$__KRONOS_CACHE_GROUPS"; end
             if test "$subaction" = "diamond" -a -z "$groups"; set groups "512,513,518,519,520"; end
         end
-    end
 
     # Validation
     if test -z "$domain"; echo "error: domain is required"; return 1; end
@@ -299,4 +294,3 @@ function __kronos_ticket --description "Create advanced AD tickets using tickete
         set -gx KRB5CCNAME "$PWD/$final_user.ccache"
         echo "[+] Ticket saved and exported to KRB5CCNAME=$KRB5CCNAME"
     end
-end

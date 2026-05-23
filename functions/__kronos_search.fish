@@ -54,8 +54,6 @@ function __kronos_search --description "Search and enumerate AD objects using bl
             if test -z "$query"
                  set query (__kronos_ask "Search Query" "*"); or return 1
             end
-        end
-    end
 
     if test -z "$target"; echo "error: target is required" >&2; return 1; end
 

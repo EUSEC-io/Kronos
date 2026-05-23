@@ -33,7 +33,7 @@ function __kronos_rdp --description "Connect to target using xfreerdp3 (RDP)"
             set -l src_target "Cache"
             if test -z "$def_target"
                 set def_target "$TGT_HOSTS[1]"; set src_target "TGT_HOSTS"
-                if test -z "$def_target"; set def_target "$TGT_HOSTS[1]"; set src_target "TGT_HOSTS"; if test -z "$def_target"; set def_target "$TGT_DC_IP"; set src_target "TGT_DC_IP"; end; end
+                if test -z "$def_target"; set def_target "$TGT_HOSTS[1]"; set src_target "TGT_HOSTS"; end
                 if test -z "$def_target"; set def_target "$TGT_DC"; set src_target "TGT_DC"; end
                 if test -z "$def_target"; set def_target "$TGT"; set src_target "TGT"; end
             end
@@ -100,8 +100,6 @@ function __kronos_rdp --description "Connect to target using xfreerdp3 (RDP)"
             else
                 set -e _rdp_path
             end
-        end
-    end
 
     # Standard Fallbacks from cache/tgt
     if test -z "$target"; set target "$__KRONOS_CACHE_RDP_TARGET"; end
@@ -120,7 +118,6 @@ function __kronos_rdp --description "Connect to target using xfreerdp3 (RDP)"
         else
             set pass "$cached_auth"
         end
-    end
     if test -z "$pass"; and test -z "$hash"; set pass $TGT_CRED_PASSWORD; end
 
     set -l size "$__KRONOS_CACHE_RDP_SIZE"
@@ -138,7 +135,6 @@ function __kronos_rdp --description "Connect to target using xfreerdp3 (RDP)"
             set -l p "$__KRONOS_CACHE_RDP_PATH"; if test -z "$p"; set p "$PWD"; end
             set -g _rdp_path "$p"
         end
-    end
 
     if test -z "$target"
         echo "error: target is required" >&2

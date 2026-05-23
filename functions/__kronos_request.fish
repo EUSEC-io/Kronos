@@ -86,7 +86,6 @@ function __kronos_request --description "Request TGT or ST and export KRB5CCNAME
         else
             set spn ""
         end
-    end
 
     if test -z "$target"; echo "error: target is required"; return 1; end
     if test -z "$domain"; echo "error: domain is required"; return 1; end
@@ -129,4 +128,3 @@ function __kronos_request --description "Request TGT or ST and export KRB5CCNAME
         set -gx KRB5CCNAME "$PWD/$user.ccache"
         echo "[+] Ticket saved and exported to KRB5CCNAME=$KRB5CCNAME"
     end
-end

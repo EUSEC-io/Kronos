@@ -51,7 +51,6 @@ function __kronos_spray --description "Password spray using nxc smb"
             set password (__kronos_ask "Password (or wordlist path) to spray" "$password"); or return 1
             set -U __KRONOS_CACHE_SPRAY_PASS "$password"
         end
-    end
 
     if test -z "$target"; echo "error: target is required"; return 1; end
     if test -z "$password"; echo "error: password is required"; return 1; end

@@ -86,13 +86,11 @@ function __kronos_ingest --description "Ingest Active Directory data using blood
                 else
                     set auth_pass "$auth_input"; set auth_hash ""
                 end
-            end
 
             set -l def_out "$domain-bloodhound.zip"
             if test -n "$outfile"; set def_out "$outfile"; end
             set outfile (__kronos_ask "Output Zip Name" "$def_out"); or return 1
         end
-    end
 
     if test -z "$target"; echo "error: target is required"; return 1; end
     if test -z "$domain"; echo "error: domain is required"; return 1; end
@@ -111,7 +109,6 @@ function __kronos_ingest --description "Ingest Active Directory data using blood
         else
             set bh_cmd "$bh_cmd -p \"$auth_pass\""
         end
-    end
 
     if set -q _flag_edit_cmd
         set bh_cmd (__kronos_edit_cmd "$bh_cmd"); or return 1
@@ -136,4 +133,3 @@ function __kronos_ingest --description "Ingest Active Directory data using blood
         echo "error: bloodhound-python encountered an error." >&2
         return 1
     end
-end

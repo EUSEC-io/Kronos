@@ -83,9 +83,6 @@ function __kronos_lookupsid --description "Enumerate SIDs for AD objects using l
                 else
                     set auth_pass "$auth_input"; set auth_hash ""
                 end
-            end
-        end
-    end
 
     if test -z "$target"; echo "error: target is required"; return 1; end
     if test -z "$domain"; echo "error: domain is required"; return 1; end

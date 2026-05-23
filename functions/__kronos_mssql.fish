@@ -34,7 +34,7 @@ function __kronos_mssql --description "Connect to target using mssqlclient.py (M
             set -l src_target "Cache"
             if test -z "$def_target"
                 set def_target "$TGT_HOSTS[1]"; set src_target "TGT_HOSTS"
-                if test -z "$def_target"; set def_target "$TGT_HOSTS[1]"; set src_target "TGT_HOSTS"; if test -z "$def_target"; set def_target "$TGT_DC_IP"; set src_target "TGT_DC_IP"; end; end
+                if test -z "$def_target"; set def_target "$TGT_HOSTS[1]"; set src_target "TGT_HOSTS"; end
                 if test -z "$def_target"; set def_target "$TGT_DC"; set src_target "TGT_DC"; end
                 if test -z "$def_target"; set def_target "$TGT"; set src_target "TGT"; end
             end
@@ -76,8 +76,6 @@ function __kronos_mssql --description "Connect to target using mssqlclient.py (M
                 else
                     set pass "$auth_input"; set hash ""
                 end
-            end
-        end
     else
         # Standard Fallbacks
         if test -z "$target"; set target "$__KRONOS_CACHE_MSSQL_TARGET"; end
@@ -96,7 +94,6 @@ function __kronos_mssql --description "Connect to target using mssqlclient.py (M
             else
                 set pass "$cached_auth"
             end
-        end
         if test -z "$pass"; and test -z "$hash"; set pass $TGT_CRED_PASSWORD; end
     end
 
@@ -129,7 +126,6 @@ function __kronos_mssql --description "Connect to target using mssqlclient.py (M
             end
             set -a mssql_args "$domain/$user:$pass@$target"
         end
-    end
 
     set -l cmd_str (string join " " -- command $impacket_cmd (string escape -- $mssql_args))
 

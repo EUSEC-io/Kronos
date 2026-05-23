@@ -69,8 +69,6 @@ function __kronos_gmsa --description "Read GMSA passwords using nxc ldap"
             else
                 set auth_pass "$auth_input"; set auth_hash ""
             end
-        end
-    end
 
     if test -z "$target"; echo "error: target is required" >&2; return 1; end
 
@@ -89,7 +87,6 @@ function __kronos_gmsa --description "Read GMSA passwords using nxc ldap"
         else
             set nxc_cmd "$nxc_cmd -p \"$auth_pass\""
         end
-    end
 
     set nxc_cmd "$nxc_cmd --gmsa"
 

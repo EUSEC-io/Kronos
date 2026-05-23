@@ -28,7 +28,7 @@ function __kronos_ftp --description "Connect to target using ftp (FTP)"
             set -l src_target "Cache"
             if test -z "$def_target"
                 set def_target "$TGT_HOSTS[1]"; set src_target "TGT_HOSTS"
-                if test -z "$def_target"; set def_target "$TGT_HOSTS[1]"; set src_target "TGT_HOSTS"; if test -z "$def_target"; set def_target "$TGT_DC_IP"; set src_target "TGT_DC_IP"; end; end
+                if test -z "$def_target"; set def_target "$TGT_HOSTS[1]"; set src_target "TGT_HOSTS"; end
                 if test -z "$def_target"; set def_target "$TGT_DC"; set src_target "TGT_DC"; end
                 if test -z "$def_target"; set def_target "$TGT"; set src_target "TGT"; end
             end
@@ -79,7 +79,6 @@ function __kronos_ftp --description "Connect to target using ftp (FTP)"
             echo "Note: Use the provided credentials if prompted."
             echo "User: $user"
         end
-    end
     
     eval $cmd_str
 end

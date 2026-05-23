@@ -66,8 +66,6 @@ function __kronos_rbcd --description "Resource-Based Constrained Delegation (RBC
                 set auth_user (__kronos_ask "Auth Username" "$auth_user"); or return 1
                 set -U __KRONOS_CACHE_RBCD_AUTH_USER "$auth_user"
             end
-        end
-    end
 
     if test -z "$target"; echo "error: target DC is required" >&2; return 1; end
     if test -z "$target_comp"; echo "error: --target-computer is required" >&2; return 1; end
