@@ -63,8 +63,9 @@ function __kronos_kerberoast --description "Run Kerberoasting using GetUserSPNs.
             set -l roast_all (__kronos_ask_confirm "Kerberoast ALL accounts?" y); or return 1
             if test "$roast_all" = "no"
                 set -l def_target_user "$__KRONOS_CACHE_KERBEROAST_TARGET_USER"
-                if test -n "$target_user"; set def_target_user "$target_user"; end
-                set target_user (__kronos_ask "Specific user to roast" "$def_target_user"); or return 1
+                set -l src_target_user "Cache"
+                if test -n "$target_user"; set def_target_user "$target_user"; set src_target_user "CLI Arg"; end
+                set target_user (__kronos_ask "Specific user to roast" "$def_target_user" "$src_target_user"); or return 1
                 set -U __KRONOS_CACHE_KERBEROAST_TARGET_USER "$target_user"
             else
                 set target_user ""

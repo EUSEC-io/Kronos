@@ -37,7 +37,6 @@ function __kronos_add_user --description "Create a new AD user using bloodyAD"
     # Load defaults for prompts
     if test -z "$target"
         set target $__KRONOS_CACHE_ADDUSER_TARGET
-        if test -z "$target"; set target $TGT_HOSTS[1]; end
         if test -z "$target"; set target $TGT_DC_IP; end
         if test -z "$target"; set target $TGT_DC; end
         if test -z "$target"; set target $TGT; end

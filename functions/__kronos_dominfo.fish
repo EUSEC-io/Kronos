@@ -1,14 +1,15 @@
 # description: Query domain info and password policy
 function __kronos_dominfo --description "Query domain info and password policy"
-    argparse h/help q/quiet P/pass-policy u/username= p/password= N/NULL k/kerberos X/edit-cmd w/wizard -- $argv
+    argparse t/target= h/help q/quiet P/pass-policy u/username= p/password= N/NULL k/kerberos X/edit-cmd w/wizard -- $argv
     or return 1
 
     if set -q _flag_help
-        echo "Usage: kronos dominfo [TARGET] [OPTIONS]"
+        echo "Usage: kronos dominfo [OPTIONS]"
         echo ""
         echo "Query domain info and password policy using rpcclient (null session) or nxc (credentialed)."
         echo ""
         echo "Options:"
+        echo "  -t, --target IP     Target DC IP or Hostname"
         echo "  -P, --pass-policy   Also query password policy"
         echo "  -u, --username USER Auth username"
         echo "  -p, --password PASS Auth password"
@@ -20,38 +21,27 @@ function __kronos_dominfo --description "Query domain info and password policy"
         return 0
     end
 
-    set -l target $argv[1]
+    set -l target $_flag_target
+    if test -z "$target"; set target $argv[1]; end
     set -l auth_user $_flag_username
     set -l auth_pass $_flag_password
     set -l pass_pol 0
     if set -q _flag_pass_policy; set pass_pol 1; end
 
-    # Load defaults
-    if test -z "$target"
-        set target $__KRONOS_CACHE_DOMINFO_TARGET
-        if test -z "$target"; set target $TGT_HOSTS[1]; end
-        if test -z "$target"; set target $TGT_DC_IP; end
-        if test -z "$target"; set target $TGT_DC; end
-        if test -z "$target"; set target $TGT; end
-    end
-
-    if test -z "$auth_user"
-        set auth_user $__KRONOS_CACHE_DOMINFO_AUTH_USER
-        if test -z "$auth_user"; set auth_user $TGT_USERNAME; end
-        if test -z "$auth_user"; set auth_user $TGT_CRED_USERNAME; end
-    end
-    if test -z "$auth_pass"
-        set auth_pass $__KRONOS_CACHE_DOMINFO_AUTH_PASS
-        if test -z "$auth_pass"; set auth_pass $TGT_PASSWORD; end
-        if test -z "$auth_pass"; set auth_pass $TGT_CRED_PASSWORD; end
-    end
-
-    # Interactive Wizard
     if not set -q _flag_quiet
-        if test (count $argv) -eq 0; or set -q _flag_wizard
+        if test "$wizard" -eq 1 -o -z "$target" -o set -q _flag_wizard
             set_color cyan; echo "[*] Starting DomInfo wizard..."; set_color normal
 
-            set target (__kronos_ask "Target DC IP/Hostname" "$target"); or return 1
+            set -l def_target "$__KRONOS_CACHE_DOMINFO_TARGET"
+            set -l src_target "Cache"
+            if test -z "$def_target"
+                set def_target "$TGT_HOSTS[1]"; set src_target "TGT_HOSTS"
+                if test -z "$def_target"; set def_target "$TGT_DC_IP"; set src_target "TGT_DC_IP"; end
+                if test -z "$def_target"; set def_target "$TGT_DC"; set src_target "TGT_DC"; end
+                if test -z "$def_target"; set def_target "$TGT"; set src_target "TGT"; end
+            end
+            if test -n "$target"; set def_target "$target"; set src_target "CLI Arg"; end
+            set target (__kronos_ask "Target DC IP/Hostname" "$def_target" "$src_target"); or return 1
             set -U __KRONOS_CACHE_DOMINFO_TARGET "$target"
 
             set -l mode "NULL Session"
@@ -61,15 +51,23 @@ function __kronos_dominfo --description "Query domain info and password policy"
             set mode (__kronos_ask_choice "Authentication Mode" "$mode" "NULL Session" "Credentials" "Kerberos"); or return 1
             
             if test "$mode" = "Credentials"
-                set auth_user (__kronos_ask "Auth Username" "$auth_user"); or return 1
+                set -l def_auth_user "$__KRONOS_CACHE_DOMINFO_AUTH_USER"
+                set -l src_user "Cache"
+                if test -z "$def_auth_user"
+                    set def_auth_user "$TGT_USERNAME"; set src_user "TGT_USERNAME"
+                    if test -z "$def_auth_user"; set def_auth_user "$TGT_CRED_USERNAME"; set src_user "TGT_CRED_USERNAME"; end
+                end
+                set auth_user (__kronos_ask "Auth Username" "$def_auth_user" "$src_user"); or return 1
                 set -U __KRONOS_CACHE_DOMINFO_AUTH_USER "$auth_user"
-                set auth_pass (__kronos_ask "Auth Password" "$auth_pass"); or return 1
+
+                set -l def_auth_val "$auth_pass"
+                if test -z "$def_auth_val"; set def_auth_val "$TGT_PASSWORD"; end
+                set auth_pass (__kronos_ask "Auth Password" "$def_auth_val"); or return 1
                 set -U __KRONOS_CACHE_DOMINFO_AUTH_PASS "$auth_pass"
                 set -e _flag_NULL
                 set -e _flag_kerberos
             else if test "$mode" = "Kerberos"
                 set auth_user (__kronos_ask "Auth Username" "$auth_user"); or return 1
-                set -U __KRONOS_CACHE_DOMINFO_AUTH_USER "$auth_user"
                 set _flag_kerberos 1
                 set -e _flag_NULL
             else
@@ -83,6 +81,22 @@ function __kronos_dominfo --description "Query domain info and password policy"
             else
                 set pass_pol 0
             end
+        end
+    else
+        # Quiet mode fallbacks
+        if test -z "$target"; set target "$__KRONOS_CACHE_DOMINFO_TARGET"; end
+        if test -z "$target"; set target $TGT_HOSTS[1]; end
+        if test -z "$target"; set target $TGT_DC_IP; end
+        
+        if test -z "$auth_user"
+            set auth_user "$TGT_USERNAME"
+            if test -z "$auth_user"; set auth_user "$TGT_CRED_USERNAME"; end
+        end
+        if test -z "$auth_pass"
+            set auth_pass "$TGT_PASSWORD"
+            if test -z "$auth_pass"; set auth_pass "$TGT_CRED_PASSWORD"; end
+        end
+    end
 
     if test -z "$target"; echo "error: target is required" >&2; return 1; end
 
@@ -128,3 +142,4 @@ function __kronos_dominfo --description "Query domain info and password policy"
         echo "[*] Querying dominfo via rpcclient (null session)..."
         eval $rpc_cmd
     end
+end

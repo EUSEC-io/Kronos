@@ -20,6 +20,7 @@ function __kronos_reset --description "Reset all cached Kronos universal variabl
             echo "Aborted."
             return 1
         end
+    end
 
     echo "[*] Clearing Kronos cache variables..."
     set -l count 0

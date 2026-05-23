@@ -36,7 +36,6 @@ function __kronos_dacl --description "Manipulate AD object DACLs using bloodyAD"
     # Load defaults
     if test -z "$target"
         set target $__KRONOS_CACHE_DACL_TARGET
-        if test -z "$target"; set target $TGT_HOSTS[1]; end
         if test -z "$target"; set target $TGT_DC_IP; end
         if test -z "$target"; set target $TGT_DC; end
         if test -z "$target"; set target $TGT; end
@@ -61,7 +60,7 @@ function __kronos_dacl --description "Manipulate AD object DACLs using bloodyAD"
             set target (__kronos_ask "Target DC IP/Hostname" "$target"); or return 1
             set -U __KRONOS_CACHE_DACL_TARGET "$target"
 
-            set target_obj (__kronos_ask "Target AD Object" "$def_target_obj" "$src_target_obj"); or return 1
+            set target_obj (__kronos_ask "Target AD Object" "$target_obj"); or return 1
             set -U __KRONOS_CACHE_DACL_TARGET_OBJ "$target_obj"
 
             set member (__kronos_ask "Member to grant/revoke" "$member"); or return 1
@@ -70,6 +69,7 @@ function __kronos_dacl --description "Manipulate AD object DACLs using bloodyAD"
             set action (__kronos_ask "Action (add, remove, set)" "$action"); or return 1
             set permission (__kronos_ask "Permission (genericAll, dcsync, owner, all)" "$permission"); or return 1
         end
+    end
 
     if test -z "$target"; echo "error: target DC is required" >&2; return 1; end
     if test -z "$target_obj"; echo "error: --target-object is required" >&2; return 1; end

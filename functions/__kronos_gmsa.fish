@@ -1,14 +1,15 @@
 # description: Read GMSA passwords using nxc ldap
 function __kronos_gmsa --description "Read GMSA passwords using nxc ldap"
-    argparse h/help q/quiet u/username= p/password= H/hash= k/kerberos X/edit-cmd w/wizard -- $argv
+    argparse t/target= h/help q/quiet u/username= p/password= H/hash= k/kerberos X/edit-cmd w/wizard -- $argv
     or return 1
 
     if set -q _flag_help
-        echo "Usage: kronos gmsa [TARGET] [OPTIONS]"
+        echo "Usage: kronos gmsa [OPTIONS]"
         echo ""
         echo "Read GMSA passwords using nxc ldap."
         echo ""
         echo "Options:"
+        echo "  -t, --target IP     Target DC IP or Hostname"
         echo "  -u, --username USER Auth username"
         echo "  -p, --password PASS Auth password"
         echo "  -H, --hash HASH     Auth NTLM hash"
@@ -19,56 +20,67 @@ function __kronos_gmsa --description "Read GMSA passwords using nxc ldap"
         return 0
     end
 
-    set -l target $argv[1]
+    set -l target $_flag_target
+    if test -z "$target"; set target $argv[1]; end
     set -l auth_user $_flag_username
     set -l auth_pass $_flag_password
     set -l auth_hash $_flag_hash
 
-    # Load defaults for prompts
-    if test -z "$target"
-        set target $__KRONOS_CACHE_GMSA_TARGET
+    if not set -q _flag_quiet
+        if test "$wizard" -eq 1 -o -z "$target" -o set -q _flag_wizard
+            set_color cyan; echo "[*] Starting GMSA wizard..."; set_color normal
+
+            set -l def_target "$__KRONOS_CACHE_GMSA_TARGET"
+            set -l src_target "Cache"
+            if test -z "$def_target"
+                set def_target "$TGT_HOSTS[1]"; set src_target "TGT_HOSTS"
+                if test -z "$def_target"; set def_target "$TGT_DC_IP"; set src_target "TGT_DC_IP"; end
+                if test -z "$def_target"; set def_target "$TGT_DC"; set src_target "TGT_DC"; end
+                if test -z "$def_target"; set def_target "$TGT"; set src_target "TGT"; end
+            end
+            if test -n "$target"; set def_target "$target"; set src_target "CLI Arg"; end
+            set target (__kronos_ask "Target DC IP/Hostname" "$def_target" "$src_target"); or return 1
+            set -U __KRONOS_CACHE_GMSA_TARGET "$target"
+
+            if not set -q _flag_kerberos
+                set -l def_auth_user "$__KRONOS_CACHE_GMSA_AUTH_USER"
+                set -l src_user "Cache"
+                if test -z "$def_auth_user"
+                    set def_auth_user "$TGT_USERNAME"; set src_user "TGT_USERNAME"
+                    if test -z "$def_auth_user"; set def_auth_user "$TGT_CRED_USERNAME"; set src_user "TGT_CRED_USERNAME"; end
+                end
+                if test -n "$auth_user"; set def_auth_user "$auth_user"; set src_user "CLI Arg"; end
+                set auth_user (__kronos_ask "Auth Username" "$def_auth_user" "$src_user"); or return 1
+                set -U __KRONOS_CACHE_GMSA_AUTH_USER "$auth_user"
+
+                set -l def_auth_val "$auth_pass"
+                if test -n "$auth_hash"; set def_auth_val "$auth_hash"; end
+                if test -z "$def_auth_val"; set def_auth_val "$TGT_PASSWORD"; end
+                set -l auth_input (__kronos_ask "Auth Password or Hash" "$def_auth_val"); or return 1
+                set -U __KRONOS_CACHE_GMSA_AUTH_VAL "$auth_input"
+                
+                if string match -rq '^[a-fA-F0-9]{32}:[a-fA-F0-9]{32}$|^[a-fA-F0-9]{32}$' -- "$auth_input"
+                    set auth_hash "$auth_input"; set auth_pass ""
+                else
+                    set auth_pass "$auth_input"; set auth_hash ""
+                end
+            end
+        end
+    else
+        # Quiet mode fallbacks
+        if test -z "$target"; set target "$__KRONOS_CACHE_GMSA_TARGET"; end
         if test -z "$target"; set target $TGT_HOSTS[1]; end
         if test -z "$target"; set target $TGT_DC_IP; end
-        if test -z "$target"; set target $TGT_DC; end
-        if test -z "$target"; set target $TGT; end
-    end
-    if test -z "$auth_user"
-        set auth_user $__KRONOS_CACHE_GMSA_AUTH_USER
-        if test -z "$auth_user"; set auth_user $TGT_USERNAME; end
-        if test -z "$auth_user"; set auth_user $TGT_CRED_USERNAME; end
-    end
-    if test -z "$auth_pass"; and test -z "$auth_hash"
-        set -l cached_auth "$__KRONOS_CACHE_GMSA_AUTH_VAL"
-        if string match -rq '^[a-fA-F0-9]{32}:[a-fA-F0-9]{32}$|^[a-fA-F0-9]{32}$' -- "$cached_auth"
-            set auth_hash "$cached_auth"
-        else
-            set auth_pass "$cached_auth"
+
+        if test -z "$auth_user"
+            set auth_user "$TGT_USERNAME"
+            if test -z "$auth_user"; set auth_user "$TGT_CRED_USERNAME"; end
         end
-        if test -z "$auth_pass"; and test -z "$auth_hash"; set auth_pass $TGT_PASSWORD; end
-        if test -z "$auth_pass"; and test -z "$auth_hash"; set auth_pass $TGT_CRED_PASSWORD; end
+        if test -z "$auth_pass"; and test -z "$auth_hash"
+            set auth_pass "$TGT_PASSWORD"
+            if test -z "$auth_pass"; set auth_pass "$TGT_CRED_PASSWORD"; end
+        end
     end
-
-    # Interactive Wizard
-    if not set -q _flag_quiet
-        set_color cyan; echo "[*] Starting GMSA wizard..."; set_color normal
-
-        set target (__kronos_ask "Target DC IP/Hostname" "$target"); or return 1
-        set -U __KRONOS_CACHE_GMSA_TARGET "$target"
-
-        if not set -q _flag_kerberos
-            set auth_user (__kronos_ask "Auth Username" "$auth_user"); or return 1
-            set -U __KRONOS_CACHE_GMSA_AUTH_USER "$auth_user"
-
-            set -l def_auth_val "$auth_pass"
-            if test -n "$auth_hash"; set def_auth_val "$auth_hash"; end
-            set -l auth_input (__kronos_ask "Auth Password or Hash" "$def_auth_val"); or return 1
-            set -U __KRONOS_CACHE_GMSA_AUTH_VAL "$auth_input"
-            
-            if string match -rq '^[a-fA-F0-9]{32}:[a-fA-F0-9]{32}$|^[a-fA-F0-9]{32}$' -- "$auth_input"
-                set auth_hash "$auth_input"; set auth_pass ""
-            else
-                set auth_pass "$auth_input"; set auth_hash ""
-            end
 
     if test -z "$target"; echo "error: target is required" >&2; return 1; end
 
@@ -87,6 +99,7 @@ function __kronos_gmsa --description "Read GMSA passwords using nxc ldap"
         else
             set nxc_cmd "$nxc_cmd -p \"$auth_pass\""
         end
+    end
 
     set nxc_cmd "$nxc_cmd --gmsa"
 

@@ -37,7 +37,6 @@ function __kronos_add_member --description "Add a user to an AD group using bloo
     # Load defaults from cache/TGT for prompts
     if test -z "$target"
         set target $__KRONOS_CACHE_ADDMEMBER_TARGET
-        if test -z "$target"; set target $TGT_HOSTS[1]; end
         if test -z "$target"; set target $TGT_DC_IP; end
         if test -z "$target"; set target $TGT_DC; end
         if test -z "$target"; set target $TGT; end
