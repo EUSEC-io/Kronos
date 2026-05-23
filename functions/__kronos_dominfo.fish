@@ -34,9 +34,11 @@ function __kronos_dominfo --description "Query domain info, users, groups, and s
 
     set -l target $_flag_target
     # Handle positional target if not provided via -t
-    if test -z "$target"; and test (count $argv) -gt 0; and not contains -- "$argv[1]" users groups shares policy loggedon
-        set target $argv[1]
-        set -e argv[1]
+    if test (count $argv) -gt 0; and not contains -- "$argv[1]" users groups shares policy loggedon
+        if test -z "$target"
+            set target $argv[1]
+            set -e argv[1]
+        end
     end
 
     set -l auth_user $_flag_username
@@ -54,36 +56,35 @@ function __kronos_dominfo --description "Query domain info, users, groups, and s
     set -l list_shares 0
     if set -q _flag_shares; or contains shares $argv; set list_shares 1; end
 
-    # Load defaults
-    if test -z "$target"
-        set -l def_target "$__KRONOS_CACHE_DOMINFO_TARGET"
-        set -l src_target "Cache"
-        if test -z "$def_target"
-            set def_target "$TGT"; set src_target "TGT"
-            if test -z "$def_target"; set def_target "$TGT_DC_IP"; set src_target "TGT_DC_IP"; end
-            if test -z "$def_target"; set def_target "$TGT_DC"; set src_target "TGT_DC"; end
-            if test -z "$def_target"; set def_target "$TGT_HOSTS[1]"; set src_target "TGT_HOSTS"; end
-        end
-        if test -n "$target"; set def_target "$target"; set src_target "CLI Arg"; end
-        
-        if not set -q _flag_quiet
-            if test "$wizard" -eq 1 -o -z "$target"; or set -q _flag_wizard
-                set_color cyan; echo "[*] Starting DomInfo wizard..."; set_color normal
-                set target (__kronos_ask "Target DC IP/Hostname" "$def_target" "$src_target"); or return 1
-                set -U __KRONOS_CACHE_DOMINFO_TARGET "$target"
-            else
-                set target "$def_target"
-            end
+    # 1. Target Resolution & Prompt
+    set -l def_target "$__KRONOS_CACHE_DOMINFO_TARGET"
+    set -l src_target "Cache"
+    if test -z "$def_target"
+        set def_target "$TGT"; set src_target "TGT"
+        if test -z "$def_target"; set def_target "$TGT_DC_IP"; set src_target "TGT_DC_IP"; end
+        if test -z "$def_target"; set def_target "$TGT_DC"; set src_target "TGT_DC"; end
+        if test -z "$def_target"; set def_target "$TGT_HOSTS[1]"; set src_target "TGT_HOSTS"; end
+    end
+    if test -n "$target"; set def_target "$target"; set src_target "CLI Arg"; end
+
+    if not set -q _flag_quiet
+        if test "$wizard" -eq 1 -o -z "$target"; or set -q _flag_wizard
+            set_color cyan; echo "[*] Starting DomInfo wizard..."; set_color normal
+            set target (__kronos_ask "Target DC IP/Hostname" "$def_target" "$src_target"); or return 1
+            set -U __KRONOS_CACHE_DOMINFO_TARGET "$target"
         else
             set target "$def_target"
         end
+    else
+        set target "$def_target"
     end
 
+    if test -z "$target"; echo "error: target is required" >&2; return 1; end
+
+    # 2. Authentication Mode & Credential Prompts
     if not set -q _flag_quiet
-        if test "$wizard" -eq 1; or set -q _flag_wizard
+        if not set -q _flag_kerberos; and not set -q _flag_NULL; and test -z "$auth_user"
             set -l mode "NULL Session"
-            if set -q _flag_kerberos; set mode "Kerberos"; end
-            if test -n "$auth_user"; and test -n "$auth_pass"; set mode "Credentials"; end
             set mode (__kronos_ask_choice "Authentication Mode" "$mode" "NULL Session" "Credentials" "Kerberos"); or return 1
             
             if test "$mode" = "Credentials"
@@ -102,11 +103,9 @@ function __kronos_dominfo --description "Query domain info, users, groups, and s
                     set def_auth_val "$TGT_PASSWORD"; set src_auth_val "TGT_PASSWORD"
                     if test -z "$def_auth_val"; set def_auth_val "$TGT_CRED_PASSWORD"; set src_auth_val "TGT_CRED_PASSWORD"; end
                 end
-                if test -n "$auth_pass"; set def_auth_val "$auth_pass"; set src_auth_val "CLI Pass"; end
                 set auth_pass (__kronos_ask "Auth Password" "$def_auth_val" "$src_auth_val")
                 set -U __KRONOS_CACHE_DOMINFO_AUTH_PASS "$auth_pass"
-                set -e _flag_NULL
-                set -e _flag_kerberos
+                set -e _flag_NULL; set -e _flag_kerberos
             else if test "$mode" = "Kerberos"
                 set auth_user (__kronos_ask "Auth Username" "$auth_user"); or return 1
                 set _flag_kerberos 1
@@ -115,8 +114,10 @@ function __kronos_dominfo --description "Query domain info, users, groups, and s
                 set _flag_NULL 1
                 set -e _flag_kerberos
             end
+        end
 
-            # Differential Multi-Select Prompt
+        # 3. Enumeration Sections Selection (if no specific task provided)
+        if test "$wizard" -eq 1; or set -q _flag_wizard
             echo "" >&2
             set_color cyan >&2; echo "  Pick Enumeration Sections" >&2; set_color normal >&2
             set_color brblack >&2; echo "    [Space to select/deselect, Enter to confirm]" >&2; set_color normal >&2
@@ -142,19 +143,19 @@ function __kronos_dominfo --description "Query domain info, users, groups, and s
             if contains "Logged-on Users" $selected; set list_loggedon 1; end
             if contains "Shares" $selected; set list_shares 1; end
         end
-    else
-        # Quiet mode fallbacks
-        if test -z "$auth_user"
-            set auth_user "$TGT_USERNAME"
-            if test -z "$auth_user"; set auth_user "$TGT_CRED_USERNAME"; end
-        end
-        if test -z "$auth_pass"
-            set auth_pass "$TGT_PASSWORD"
-            if test -z "$auth_pass"; set auth_pass "$TGT_CRED_PASSWORD"; end
-        end
     end
 
-    if test -z "$target"; echo "error: target is required" >&2; return 1; end
+    # Quiet mode/Automatic fallbacks for Credentials
+    if test -z "$auth_user"
+        set auth_user "$TGT_USERNAME"
+        if test -z "$auth_user"; set auth_user "$TGT_CRED_USERNAME"; end
+        if test -z "$auth_user"; set auth_user "$__KRONOS_CACHE_DOMINFO_AUTH_USER"; end
+    end
+    if test -z "$auth_pass"
+        set auth_pass "$TGT_PASSWORD"
+        if test -z "$auth_pass"; set auth_pass "$TGT_CRED_PASSWORD"; end
+        if test -z "$auth_pass"; set auth_pass "$__KRONOS_CACHE_DOMINFO_AUTH_PASS"; end
+    end
 
     set -l has_creds 0
     if test -n "$auth_user"; and test -n "$auth_pass"; set has_creds 1; end
@@ -163,8 +164,6 @@ function __kronos_dominfo --description "Query domain info, users, groups, and s
 
     if test "$has_creds" -eq 1
         __kronos_check_dep nxc; or return 1
-        
-        # Define common base for NXC commands
         set -l nxc_base "nxc smb $target"
         if test -n "$TGT_DC_DOMAIN"; set nxc_base "$nxc_base -d $TGT_DC_DOMAIN"; end
         if set -q _flag_kerberos
@@ -176,7 +175,6 @@ function __kronos_dominfo --description "Query domain info, users, groups, and s
         echo ""
         set_color -o yellow; echo ">>> [ SECTION: DOMAIN ENUMERATION ] <<<"; set_color normal
 
-        # Individual Modules with descriptive lines
         if test "$list_shares" -eq 1
             echo ""; set_color cyan; echo "[*] Enumerating Shares Now ...."; set_color normal
             set -l cmd "$nxc_base --shares"
@@ -207,7 +205,6 @@ function __kronos_dominfo --description "Query domain info, users, groups, and s
 
         if test "$list_groups" -eq 1
             echo ""; set_color cyan; echo "[*] Enumerating Domain Groups Now ...."; set_color normal
-            # Groups is better over LDAP
             set -l ldap_base "nxc ldap $target"
             if test -n "$TGT_DC_DOMAIN"; set ldap_base "$ldap_base -d $TGT_DC_DOMAIN"; end
             if set -q _flag_kerberos
