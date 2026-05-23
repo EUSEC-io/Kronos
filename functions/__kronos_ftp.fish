@@ -1,6 +1,6 @@
 # description: Connect to target using ftp (FTP)
 function __kronos_ftp --description "Connect to target using ftp (FTP)"
-    argparse h/help u/username= p/password= w/wizard q/quiet X/edit-cmd -- $argv
+    argparse t/target= h/help X/edit-cmd u/username= p/password= q/quiet w/wizard -- $argv
     or return 1
 
     if set -q _flag_help
@@ -9,64 +9,66 @@ function __kronos_ftp --description "Connect to target using ftp (FTP)"
         echo "Connect to a target via FTP."
         echo ""
         echo "Options:"
-        echo "  -u, --username USER Provide username (falls back to \$TGT_CRED_USERNAME)"
-        echo "  -p, --password PASS Provide password (falls back to \$TGT_CRED_PASSWORD)"
+        echo "  -t, --target IP     Target IP or Hostname"
+        echo "  -u, --username USER Provide username"
+        echo "  -p, --password PASS Provide password"
+        echo "  -X, --edit-cmd      Edit command before execution"
         echo "  -q, --quiet         Skip prompts and use cached/default values"
-        echo "  -X, --edit-cmd      Edit the command before execution"
         echo "  -h, --help          Show this help message"
         return 0
     end
 
-    set -l target $argv[1]
+    set -l target $_flag_target
+    if test -z "$target"; set target $argv[1]; end
     set -l user $_flag_username
+    set -l pass $_flag_password
 
     if not set -q _flag_quiet
         if set -q _flag_wizard; or test -z "$target"
             set_color cyan; echo "[*] Starting FTP connection wizard..."; set_color normal
             
             set -l def_target "$__KRONOS_CACHE_FTP_TARGET"
-            if test -z "$def_target"; set def_target "$TGT"; end
-            if test -n "$target"; set def_target "$target"; end
-            set target (__kronos_ask "Target IP/Hostname" "$def_target"); or return 1
+            set -l src_target "Cache"
+            if test -z "$def_target"
+                set def_target "$TGT"; set src_target "TGT"
+                if test -z "$def_target"; set def_target "$TGT_DC_IP"; set src_target "TGT_DC_IP"; end
+                if test -z "$def_target"; set def_target "$TGT_DC"; set src_target "TGT_DC"; end
+                if test -z "$def_target"; set def_target "$TGT_HOSTS[1]"; set src_target "TGT_HOSTS"; end
+            end
+            if test -n "$target"; set def_target "$target"; set src_target "CLI Arg"; end
+            set target (__kronos_ask "Target IP/Hostname" "$def_target" "$src_target"); or return 1
             set -U __KRONOS_CACHE_FTP_TARGET "$target"
 
             set -l def_user "$__KRONOS_CACHE_FTP_USER"
-            if test -z "$def_user"; set def_user "$TGT_CRED_USERNAME"; end
-            if test -n "$user"; set def_user "$user"; end
-            set user (__kronos_ask "Username" "$def_user"); or return 1
+            set -l src_user "Cache"
+            if test -z "$def_user"; set def_user "anonymous"; set src_user "Default"; end
+            if test -n "$user"; set def_user "$user"; set src_user "CLI Arg"; end
+            set user (__kronos_ask "Username" "$def_user" "$src_user"); or return 1
             set -U __KRONOS_CACHE_FTP_USER "$user"
+
+            set -l def_pass "$__KRONOS_CACHE_FTP_PASS"
+            if test -z "$def_pass"; set def_pass "anonymous"; end
+            if test -n "$pass"; set def_pass "$pass"; end
+            set pass (__kronos_ask "Password" "$def_pass"); or return 1
+            set -U __KRONOS_CACHE_FTP_PASS "$pass"
         end
     else
-        # Standard Fallbacks
+        # Fallbacks
         if test -z "$target"; set target "$__KRONOS_CACHE_FTP_TARGET"; end
-        if test -z "$target"; set target $TGT; end
-
+        if test -z "$target"; set target "$TGT"; end
         if test -z "$user"; set user "$__KRONOS_CACHE_FTP_USER"; end
-        if test -z "$user"; set user $TGT_CRED_USERNAME; end
+        if test -z "$user"; set user "anonymous"; end
+        if test -z "$pass"; set pass "$__KRONOS_CACHE_FTP_PASS"; end
     end
 
-    if test -z "$target"
-        echo "error: target is required" >&2
-        return 1
-    end
+    if test -z "$target"; echo "error: target is required"; return 1; end
 
-    if not command -v ftp >/dev/null
-        echo "error: ftp client not found in PATH" >&2
-        return 1
-    end
+    __kronos_check_dep ftp; or return 1
 
-    set -l cmd_str (string join " " -- command ftp (string escape -- $target))
+    set -l cmd_str "ftp $target"
+    if set -q _flag_edit_cmd; set cmd_str (__kronos_edit_cmd "$cmd_str"); or return 1; end
 
-    if set -q _flag_edit_cmd
-        set cmd_str (__kronos_edit_cmd "$cmd_str"); or return 1
-    end
-
-    if not set -q _flag_quiet
-        echo "[*] Connecting to $target via FTP..."
-        if test -n "$user"
-            echo "Note: Use the provided credentials if prompted."
-            echo "User: $user"
-        end
-    
+    echo "[*] Connecting to $target via FTP..."
+    echo "Note: Use user '$user' and password '$pass'"
     eval $cmd_str
 end

@@ -81,9 +81,11 @@ function __kronos_dominfo --description "Query domain info and password policy"
             else
                 set pass_pol 0
             end
+        end
     else
         # Quiet mode fallbacks
         if test -z "$target"; set target "$__KRONOS_CACHE_DOMINFO_TARGET"; end
+        if test -z "$target"; set target $TGT; end
         if test -z "$target"; set target $TGT_HOSTS[1]; end
         if test -z "$target"; set target $TGT_DC_IP; end
         
@@ -95,6 +97,7 @@ function __kronos_dominfo --description "Query domain info and password policy"
             set auth_pass "$TGT_PASSWORD"
             if test -z "$auth_pass"; set auth_pass "$TGT_CRED_PASSWORD"; end
         end
+    end
 
     if test -z "$target"; echo "error: target is required" >&2; return 1; end
 
@@ -140,3 +143,4 @@ function __kronos_dominfo --description "Query domain info and password policy"
         echo "[*] Querying dominfo via rpcclient (null session)..."
         eval $rpc_cmd
     end
+end

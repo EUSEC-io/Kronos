@@ -1,6 +1,6 @@
 # description: Request TGT or ST and export KRB5CCNAME
 function __kronos_request --description "Request TGT or ST and export KRB5CCNAME"
-    argparse h/help u/username= p/password= H/hash= s/spn= d/domain= t/target= X/edit-cmd q/quiet w/wizard -- $argv
+    argparse t/target= h/help u/username= p/password= H/hash= s/spn= d/domain= X/edit-cmd q/quiet w/wizard -- $argv
     or return 1
 
     if set -q _flag_help
@@ -49,7 +49,7 @@ function __kronos_request --description "Request TGT or ST and export KRB5CCNAME
             set -l src_domain "Cache"
             if test -z "$def_domain"
                 set def_domain "$TGT_HOSTS[1]"; set src_domain "TGT_HOSTS"
-                if test -z "$def_domain"; set def_domain "$TGT_HOSTS[1]"; set src_domain "TGT_HOSTS"; if test -z "$def_domain"; set def_domain "$TGT_DC_DOMAIN"; set src_domain "TGT_DC_DOMAIN"; end; end
+                if test -z "$def_domain"; set def_domain "$TGT_DC_DOMAIN"; set src_domain "TGT_DC_DOMAIN"; end
             end
             if test -n "$domain"; set def_domain "$domain"; set src_domain "CLI Arg"; end
             set domain (__kronos_ask "Domain Name" "$def_domain" "$src_domain"); or return 1
@@ -85,29 +85,16 @@ function __kronos_request --description "Request TGT or ST and export KRB5CCNAME
             else
                 set spn ""
             end
+        end
     else
-        # Quiet mode fallbacks
+        # Fallbacks
         if test -z "$target"; set target "$__KRONOS_CACHE_REQUEST_TARGET"; end
-        if test -z "$target"; set target $TGT_HOSTS[1]; end
-        if test -z "$target"; set target $TGT_DC_IP; end
-
+        if test -z "$target"; set target "$TGT"; end
         if test -z "$domain"; set domain "$__KRONOS_CACHE_REQUEST_DOMAIN"; end
-        if test -z "$domain"; set domain "$TGT_DC_DOMAIN"; end
-
+        if test -z "$domain"; set domain "$TGT_HOSTS[1]"; end
         if test -z "$user"; set user "$__KRONOS_CACHE_REQUEST_USER"; end
         if test -z "$user"; set user "$TGT_USERNAME"; end
-        if test -z "$user"; set user "$TGT_CRED_USERNAME"; end
-        
-        if test -z "$pass"; and test -z "$hash"
-            set -l cached_auth "$__KRONOS_CACHE_REQUEST_AUTH_VAL"
-            if string match -rq '^[a-fA-F0-9]{32}:[a-fA-F0-9]{32}$|^[a-fA-F0-9]{32}$' -- "$cached_auth"
-                set hash "$cached_auth"
-            else
-                set pass "$cached_auth"
-            end
-            if test -z "$pass"; and test -z "$hash"; set pass $TGT_PASSWORD; end
-            if test -z "$pass"; and test -z "$hash"; set pass $TGT_CRED_PASSWORD; end
-        end
+    end
 
     if test -z "$target"; echo "error: target is required"; return 1; end
     if test -z "$domain"; echo "error: domain is required"; return 1; end
@@ -135,15 +122,13 @@ function __kronos_request --description "Request TGT or ST and export KRB5CCNAME
     end
 
     set -l full_cmd "$impacket_cmd "(string join ' ' -- $req_args)
-    if set -q _flag_edit_cmd
-        set full_cmd (__kronos_edit_cmd "$full_cmd"); or return 1
-    end
+    if set -q _flag_edit_cmd; set full_cmd (__kronos_edit_cmd "$full_cmd"); or return 1; end
 
     __kronos_check_dep $impacket_cmd; or return 1
-    echo "[*] Requesting ticket via $impacket_cmd..."
     eval $full_cmd
 
     if test -f "$user.ccache"
         set -gx KRB5CCNAME "$PWD/$user.ccache"
         echo "[+] Ticket saved and exported to KRB5CCNAME=$KRB5CCNAME"
     end
+end

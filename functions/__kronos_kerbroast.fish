@@ -82,6 +82,8 @@ function __kronos_kerbroast --description "Run Kerberoasting using GetUserSPNs.p
                 else
                     set pass "$auth_input"; set hash ""
                 end
+            end
+        end
     else
         # Quiet mode fallbacks
         if test -z "$target"; set target "$__KRONOS_CACHE_KERBROAST_TARGET"; end
@@ -104,9 +106,11 @@ function __kronos_kerbroast --description "Run Kerberoasting using GetUserSPNs.p
                 else
                     set pass "$cached_auth"
                 end
+            end
             if test -z "$pass"; and test -z "$hash"; set pass $TGT_PASSWORD; end
             if test -z "$pass"; and test -z "$hash"; set pass $TGT_CRED_PASSWORD; end
         end
+    end
 
     if test -z "$target"; echo "error: target is required"; return 1; end
     if test -z "$domain"; echo "error: domain is required"; return 1; end

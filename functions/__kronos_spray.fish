@@ -53,14 +53,11 @@ function __kronos_spray --description "Password spray using nxc smb"
             set -U __KRONOS_CACHE_SPRAY_PASS "$password"
         end
     else
-        # Quiet mode fallbacks
+        # Fallbacks
         if test -z "$target"; set target "$__KRONOS_CACHE_SPRAY_TARGET"; end
-        if test -z "$target"; set target $TGT_HOSTS[1]; end
-        if test -z "$target"; set target $TGT_DC_IP; end
-        
+        if test -z "$target"; set target "$TGT"; end
         if test -z "$userlist"; set userlist "$__KRONOS_CACHE_SPRAY_USERLIST"; end
         if test -z "$userlist"; set userlist "valid_users.txt"; end
-        
         if test -z "$password"; set password "$__KRONOS_CACHE_SPRAY_PASS"; end
     end
 
@@ -77,9 +74,7 @@ function __kronos_spray --description "Password spray using nxc smb"
         set nxc_cmd "$nxc_cmd -d \"$TGT_DC_DOMAIN\""
     end
 
-    if set -q _flag_edit_cmd
-        set nxc_cmd (__kronos_edit_cmd "$nxc_cmd"); or return 1
-    end
+    if set -q _flag_edit_cmd; set nxc_cmd (__kronos_edit_cmd "$nxc_cmd"); or return 1; end
 
     __kronos_check_dep nxc; or return 1
 

@@ -1,63 +1,46 @@
 # description: Force change a user's password using bloodyAD
 function __kronos_forcechange --description "Force change a user's password using bloodyAD"
-    argparse h/help u/username= p/password= H/hash= t/target-user= P/new-password= k/kerberos q/quiet w/wizard X/edit-cmd -- $argv
+    argparse h/help u/username= p/password= H/hash= t/target-user= P/new-password= k/kerberos q/quiet target= w/wizard X/edit-cmd -- $argv
     or return 1
 
     if set -q _flag_help
-        echo "Usage: kronos forcechange [TARGET] [OPTIONS]"
+        echo "Usage: kronos forcechange [OPTIONS]"
         echo ""
         echo "Force change a user's password using bloodyAD."
         echo ""
         echo "Options:"
-        echo "  -t, --target-user U Target user whose password will be changed"
+        echo "  -t, --target IP     Target DC IP or Hostname"
+        echo "  -u, --target-user U Target user whose password will be changed"
         echo "  -P, --new-password  The new password to set"
-        echo "  -u, --username USER Auth username"
-        echo "  -p, --password PASS Auth password"
-        echo "  -H, --hash HASH     Auth NTLM hash"
-        echo "  -k, --kerberos      Use Kerberos authentication"
+        echo "  -A, --auth-user     Auth username"
         echo "  -X, --edit-cmd      Edit the command before execution"
         echo "  -q, --quiet         Skip prompts and use cached/default values"
         echo "  -h, --help          Show this help message"
         return 0
     end
 
-    set -l target $argv[1]
+    set -l target $_flag_target
+    if test -z "$target"; set target $argv[1]; end
     set -l target_user $_flag_target_user
     set -l new_pass $_flag_new_password
     set -l auth_user $_flag_username
     set -l auth_pass $_flag_password
     set -l auth_hash $_flag_hash
 
-    # Load defaults
-    if test -z "$target"
-        set target $__KRONOS_CACHE_FORCEPASS_TARGET
-        if test -z "$target"; set target $TGT_DC_IP; end
-        if test -z "$target"; set target $TGT_DC; end
-        if test -z "$target"; set target $TGT; end
-    end
-    if test -z "$target_user"; set target_user $__KRONOS_CACHE_FORCEPASS_USER; end
-    if test -z "$new_pass"; set new_pass $__KRONOS_CACHE_FORCEPASS_NEW_PASS; end
-    if test -z "$auth_user"
-        set auth_user $__KRONOS_CACHE_FORCEPASS_AUTH_USER
-        if test -z "$auth_user"; set auth_user $TGT_USERNAME; end
-        if test -z "$auth_user"; set auth_user $TGT_CRED_USERNAME; end
-    end
-    if test -z "$auth_pass"; and test -z "$auth_hash"
-        set -l cached_auth "$__KRONOS_CACHE_FORCEPASS_AUTH_VAL"
-        if string match -rq '^[a-fA-F0-9]{32}:[a-fA-F0-9]{32}$|^[a-fA-F0-9]{32}$' -- "$cached_auth"
-            set auth_hash "$cached_auth"
-        else
-            set auth_pass "$cached_auth"
-        end
-        if test -z "$auth_pass"; and test -z "$auth_hash"; set auth_pass $TGT_PASSWORD; end
-        if test -z "$auth_pass"; and test -z "$auth_hash"; set auth_pass $TGT_CRED_PASSWORD; end
-    end
-
     if not set -q _flag_quiet
-        if test (count $argv) -eq 0; or set -q _flag_wizard
+        if test (count $argv) -eq 0 -o -z "$target"; or set -q _flag_wizard
             set_color cyan; echo "[*] Starting Force Password Change wizard..."; set_color normal
 
-            set target (__kronos_ask "Target DC IP/Hostname" "$target"); or return 1
+            set -l def_target "$__KRONOS_CACHE_FORCEPASS_TARGET"
+            set -l src_target "Cache"
+            if test -z "$def_target"
+                set def_target "$TGT"; set src_target "TGT"
+                if test -z "$def_target"; set def_target "$TGT_DC_IP"; set src_target "TGT_DC_IP"; end
+                if test -z "$def_target"; set def_target "$TGT_DC"; set src_target "TGT_DC"; end
+                if test -z "$def_target"; set def_target "$TGT_HOSTS[1]"; set src_target "TGT_HOSTS"; end
+            end
+            if test -n "$target"; set def_target "$target"; set src_target "CLI Arg"; end
+            set target (__kronos_ask "Target DC IP/Hostname" "$def_target" "$src_target"); or return 1
             set -U __KRONOS_CACHE_FORCEPASS_TARGET "$target"
 
             set target_user (__kronos_ask "User to Reset" "$target_user"); or return 1
@@ -67,11 +50,18 @@ function __kronos_forcechange --description "Force change a user's password usin
             set -U __KRONOS_CACHE_FORCEPASS_NEW_PASS "$new_pass"
 
             if not set -q _flag_kerberos
-                set auth_user (__kronos_ask "Auth Username" "$auth_user"); or return 1
+                set -l def_auth_user "$__KRONOS_CACHE_FORCEPASS_AUTH_USER"
+                set -l src_user "Cache"
+                if test -z "$def_auth_user"
+                    set def_auth_user "$TGT_USERNAME"; set src_user "TGT_USERNAME"
+                    if test -z "$def_auth_user"; set def_auth_user "$TGT_CRED_USERNAME"; set src_user "TGT_CRED_USERNAME"; end
+                end
+                set auth_user (__kronos_ask "Auth Username" "$def_auth_user" "$src_user"); or return 1
                 set -U __KRONOS_CACHE_FORCEPASS_AUTH_USER "$auth_user"
 
                 set -l def_auth_val "$auth_pass"
                 if test -n "$auth_hash"; set def_auth_val "$auth_hash"; end
+                if test -z "$def_auth_val"; set def_auth_val "$TGT_PASSWORD"; end
                 set -l auth_input (__kronos_ask "Auth Password or Hash" "$def_auth_val"); or return 1
                 set -U __KRONOS_CACHE_FORCEPASS_AUTH_VAL "$auth_input"
                 
@@ -80,6 +70,7 @@ function __kronos_forcechange --description "Force change a user's password usin
                 else
                     set auth_pass "$auth_input"; set auth_hash ""
                 end
+            end
 
             # Confirmation
             echo ""
@@ -92,6 +83,23 @@ function __kronos_forcechange --description "Force change a user's password usin
                 echo "Aborted."
                 return 1
             end
+        end
+    else
+        # Quiet mode fallbacks
+        if test -z "$target"; set target "$__KRONOS_CACHE_FORCEPASS_TARGET"; end
+        if test -z "$target"; set target $TGT; end
+        if test -z "$target"; set target $TGT_HOSTS[1]; end
+        if test -z "$target"; set target $TGT_DC_IP; end
+
+        if test -z "$auth_user"
+            set auth_user "$TGT_USERNAME"
+            if test -z "$auth_user"; set auth_user "$TGT_CRED_USERNAME"; end
+        end
+        if test -z "$auth_pass"
+            set auth_pass "$TGT_PASSWORD"
+            if test -z "$auth_pass"; set auth_pass "$TGT_CRED_PASSWORD"; end
+        end
+    end
 
     if test -z "$target"; echo "error: target is required"; return 1; end
     if test -z "$target_user"; echo "error: target user is required"; return 1; end
@@ -117,6 +125,7 @@ function __kronos_forcechange --description "Force change a user's password usin
         else
             set -a cmd_list -p "$auth_pass"
         end
+    end
 
     set -a cmd_list set password "$target_user" "$new_pass"
 

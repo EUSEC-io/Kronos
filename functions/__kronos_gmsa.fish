@@ -49,7 +49,6 @@ function __kronos_gmsa --description "Read GMSA passwords using nxc ldap"
                     set def_auth_user "$TGT_USERNAME"; set src_user "TGT_USERNAME"
                     if test -z "$def_auth_user"; set def_auth_user "$TGT_CRED_USERNAME"; set src_user "TGT_CRED_USERNAME"; end
                 end
-                if test -n "$auth_user"; set def_auth_user "$auth_user"; set src_user "CLI Arg"; end
                 set auth_user (__kronos_ask "Auth Username" "$def_auth_user" "$src_user"); or return 1
                 set -U __KRONOS_CACHE_GMSA_AUTH_USER "$auth_user"
 
@@ -64,9 +63,12 @@ function __kronos_gmsa --description "Read GMSA passwords using nxc ldap"
                 else
                     set auth_pass "$auth_input"; set auth_hash ""
                 end
+            end
+        end
     else
         # Quiet mode fallbacks
         if test -z "$target"; set target "$__KRONOS_CACHE_GMSA_TARGET"; end
+        if test -z "$target"; set target $TGT; end
         if test -z "$target"; set target $TGT_HOSTS[1]; end
         if test -z "$target"; set target $TGT_DC_IP; end
 
@@ -78,6 +80,7 @@ function __kronos_gmsa --description "Read GMSA passwords using nxc ldap"
             set auth_pass "$TGT_PASSWORD"
             if test -z "$auth_pass"; set auth_pass "$TGT_CRED_PASSWORD"; end
         end
+    end
 
     if test -z "$target"; echo "error: target is required" >&2; return 1; end
 
@@ -96,6 +99,7 @@ function __kronos_gmsa --description "Read GMSA passwords using nxc ldap"
         else
             set nxc_cmd "$nxc_cmd -p \"$auth_pass\""
         end
+    end
 
     set nxc_cmd "$nxc_cmd --gmsa"
 

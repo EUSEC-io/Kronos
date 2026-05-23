@@ -1,6 +1,6 @@
 # description: Create a new AD computer account using addcomputer.py
 function __kronos_add_computer --description "Create a new AD computer account using addcomputer.py"
-    argparse h/help u/username= p/password= H/hash= k/kerberos C/computer= P/computer-pass= q/quiet t/target= w/wizard X/edit-cmd -- $argv
+    argparse t/target= h/help q/quiet u/username= p/password= H/hash= C/computer= P/computer-pass= k/kerberos X/edit-cmd w/wizard -- $argv
     or return 1
 
     if set -q _flag_help
@@ -17,7 +17,7 @@ function __kronos_add_computer --description "Create a new AD computer account u
         echo "  -H, --hash HASH         Auth NTLM hash"
         echo "  -k, --kerberos          Use Kerberos authentication"
         echo "  -X, --edit-cmd          Edit the command before execution"
-        echo "  -q, --quiet             Skip all prompts and use fallbacks/cached values"
+        echo "  -q, --quiet             Skip prompts and use cached/default values"
         echo "  -h, --help              Show this help message"
         return 0
     end
@@ -53,11 +53,18 @@ function __kronos_add_computer --description "Create a new AD computer account u
             set -U __KRONOS_CACHE_ADDCOMP_PASS "$computer_pass"
 
             if not set -q _flag_kerberos
-                set auth_user (__kronos_ask "Auth Username" "$auth_user"); or return 1
+                set -l def_auth_user "$__KRONOS_CACHE_ADDCOMP_AUTH_USER"
+                set -l src_user "Cache"
+                if test -z "$def_auth_user"
+                    set def_auth_user "$TGT_USERNAME"; set src_user "TGT_USERNAME"
+                    if test -z "$def_auth_user"; set def_auth_user "$TGT_CRED_USERNAME"; set src_user "TGT_CRED_USERNAME"; end
+                end
+                set auth_user (__kronos_ask "Auth Username" "$def_auth_user" "$src_user"); or return 1
                 set -U __KRONOS_CACHE_ADDCOMP_AUTH_USER "$auth_user"
 
                 set -l def_auth_val "$auth_pass"
                 if test -n "$auth_hash"; set def_auth_val "$auth_hash"; end
+                if test -z "$def_auth_val"; set def_auth_val "$TGT_PASSWORD"; end
                 set -l auth_input (__kronos_ask "Auth Password or Hash" "$def_auth_val"); or return 1
                 set -U __KRONOS_CACHE_ADDCOMP_AUTH_VAL "$auth_input"
                 
@@ -84,9 +91,8 @@ function __kronos_add_computer --description "Create a new AD computer account u
         # Quiet mode fallbacks
         if test -z "$target"; set target "$__KRONOS_CACHE_ADDCOMP_TARGET"; end
         if test -z "$target"; set target $TGT; end
-        if test -z "$target"; set target $TGT_DC_IP; end
-        if test -z "$target"; set target $TGT_DC; end
         if test -z "$target"; set target $TGT_HOSTS[1]; end
+        if test -z "$target"; set target $TGT_DC_IP; end
 
         if test -z "$auth_user"
             set auth_user "$TGT_USERNAME"

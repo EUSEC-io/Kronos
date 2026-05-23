@@ -20,10 +20,12 @@ function __kronos_reset --description "Reset all cached Kronos universal variabl
             echo "Aborted."
             return 1
         end
+    end
 
     echo "[*] Clearing Kronos cache variables..."
     set -l count 0
-    for var in (set -U | grep "^__KRONOS_CACHE_" | awk '{print $1}')
+    # Use fish -c to get universal variables cleanly
+    for var in (fish -c 'set -U' | grep "^__KRONOS_CACHE_" | awk '{print $1}')
         set -eU $var
         set count (math $count + 1)
     end
