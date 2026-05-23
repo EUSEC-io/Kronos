@@ -59,7 +59,6 @@ function __kronos_rpc --description "Connect to target using rpcclient (RPC)"
             set domain (__kronos_ask "Domain" "$def_domain"); or return 1
             set -U __KRONOS_CACHE_RPC_DOMAIN "$domain"
         end
-    end
 
     # Standard Fallbacks
     if test -z "$target"
@@ -110,7 +109,6 @@ function __kronos_rpc --description "Connect to target using rpcclient (RPC)"
             if test -n "$auth_user"; set -a cmd_list -U "$auth_user"; end
             if test -n "$domain"; set -a cmd_list -W "$domain"; end
         end
-    end
 
     set -l cmd_str (string escape -- $cmd_list | string join " ")
 

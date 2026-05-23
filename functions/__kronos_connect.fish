@@ -41,7 +41,6 @@ function __kronos_connect --description "Dispatcher for protocol-specific connec
         else
             echo "error: protocol required in quiet mode" >&2; return 1
         end
-    end
     
     # Handle flags if they were passed BEFORE or AFTER subcommand (though above logic handles most cases)
     switch "$subaction"
@@ -56,4 +55,3 @@ function __kronos_connect --description "Dispatcher for protocol-specific connec
             __kronos_help
             return 1
     end
-end

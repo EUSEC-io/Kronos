@@ -55,9 +55,6 @@ function __kronos_winrm --description "Connect to target using evil-winrm (WinRM
                 else
                     set pass "$auth_input"; set hash ""
                 end
-            end
-        end
-    end
 
     # Standard Fallbacks
     if test -z "$target"; set target "$__KRONOS_CACHE_WINRM_TARGET"; end

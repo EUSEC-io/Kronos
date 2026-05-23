@@ -71,9 +71,6 @@ function __kronos_smb --description "Connect to target using smbclient (SMB)"
                 else
                     set pass "$auth_input"; set hash ""
                 end
-            end
-        end
-    end
 
     # Standard Fallbacks
     if test -z "$target"; set target "$__KRONOS_CACHE_SMB_TARGET"; end
@@ -97,7 +94,6 @@ function __kronos_smb --description "Connect to target using smbclient (SMB)"
             else
                 set pass "$cached_auth"
             end
-        end
         if test -z "$pass"; and test -z "$hash"; set pass $TGT_PASSWORD; end
         if test -z "$pass"; and test -z "$hash"; set pass $TGT_CRED_PASSWORD; end
     end

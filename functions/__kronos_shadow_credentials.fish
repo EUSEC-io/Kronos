@@ -68,7 +68,6 @@ function __kronos_shadow_credentials --description "Shadow Credentials attack (K
                 set auth_pass (__kronos_ask "Auth Password" "$auth_pass"); or return 1
                 set -U __KRONOS_CACHE_SHADOW_AUTH_PASS "$auth_pass"
             end
-        end
 
         # Confirmation
         echo ""
@@ -82,7 +81,6 @@ function __kronos_shadow_credentials --description "Shadow Credentials attack (K
             echo "Aborted."
             return 1
         end
-    end
 
     if test -z "$target"; echo "error: target is required"; return 1; end
     if test -z "$target_obj"; echo "error: target object is required"; return 1; end

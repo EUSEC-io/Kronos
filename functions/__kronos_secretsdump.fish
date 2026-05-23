@@ -55,7 +55,7 @@ function __kronos_secretsdump --description "Dump AD secrets using secretsdump.p
             set -l src_domain "Cache"
             if test -z "$def_domain"
                 set def_domain "$TGT_HOSTS[1]"; set src_domain "TGT_HOSTS"
-                if test -z "$def_domain"; set def_domain "$TGT_DC_DOMAIN"; set src_domain "TGT_DC_DOMAIN"; end
+                if test -z "$def_domain"; set def_domain "$TGT_HOSTS[1]"; set src_domain "TGT_HOSTS"; if test -z "$def_domain"; set def_domain "$TGT_DC_DOMAIN"; set src_domain "TGT_DC_DOMAIN"; end; end
             end
             if test -n "$domain"; set def_domain "$domain"; set src_domain "CLI Arg"; end
             set domain (__kronos_ask "Domain Name" "$def_domain" "$src_domain"); or return 1
@@ -85,6 +85,7 @@ function __kronos_secretsdump --description "Dump AD secrets using secretsdump.p
 
                 set -l def_auth_val "$auth_pass"
                 if test -n "$auth_hash"; set def_auth_val "$auth_hash"; end
+                if test -z "$def_auth_val"; set def_auth_val "$TGT_PASSWORD"; end
                 set -l auth_input (__kronos_ask "Auth Password or Hash" "$def_auth_val"); or return 1
                 set -U __KRONOS_CACHE_SECRETS_AUTH_VAL "$auth_input"
                 
@@ -93,7 +94,6 @@ function __kronos_secretsdump --description "Dump AD secrets using secretsdump.p
                 else
                     set auth_pass "$auth_input"; set auth_hash ""
                 end
-            end
 
             # Confirmation
             echo ""
@@ -107,16 +107,16 @@ function __kronos_secretsdump --description "Dump AD secrets using secretsdump.p
                 echo "Aborted."
                 return 1
             end
-        end
     else
         # Quiet mode fallbacks
         if test -z "$target"; set target "$__KRONOS_CACHE_SECRETS_TARGET"; end
-        if test -z "$target"; set target $TGT_HOSTS[1]; end
+        if test -z "$target"; set target $TGT; end
         if test -z "$target"; set target $TGT_DC_IP; end
         if test -z "$target"; set target $TGT_DC; end
-        if test -z "$target"; set target $TGT; end
+        if test -z "$target"; set target $TGT_HOSTS[1]; end
 
         if test -z "$domain"; set domain "$__KRONOS_CACHE_SECRETS_DOMAIN"; end
+        if test -z "$domain"; set domain $TGT_HOSTS[1]; end
         if test -z "$domain"; set domain "$TGT_DC_DOMAIN"; end
 
         if test -z "$user"; set user "$__KRONOS_CACHE_SECRETS_AUTH_USER"; end

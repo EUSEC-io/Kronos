@@ -50,7 +50,7 @@ function __kronos_lookupsid --description "Enumerate SIDs for AD objects using l
             set -l src_domain "Cache"
             if test -z "$def_domain"
                 set def_domain "$TGT_HOSTS[1]"; set src_domain "TGT_HOSTS"
-                if test -z "$def_domain"; set def_domain "$TGT_DC_DOMAIN"; set src_domain "TGT_DC_DOMAIN"; end
+                if test -z "$def_domain"; set def_domain "$TGT_HOSTS[1]"; set src_domain "TGT_HOSTS"; if test -z "$def_domain"; set def_domain "$TGT_DC_DOMAIN"; set src_domain "TGT_DC_DOMAIN"; end; end
             end
             if test -n "$domain"; set def_domain "$domain"; set src_domain "CLI Arg"; end
             set domain (__kronos_ask "Domain Name" "$def_domain" "$src_domain"); or return 1
@@ -78,8 +78,6 @@ function __kronos_lookupsid --description "Enumerate SIDs for AD objects using l
                 else
                     set auth_pass "$auth_input"; set auth_hash ""
                 end
-            end
-        end
     else
         # Quiet mode fallbacks
         if test -z "$target"; set target "$__KRONOS_CACHE_LOOKUPSID_TARGET"; end
@@ -97,7 +95,6 @@ function __kronos_lookupsid --description "Enumerate SIDs for AD objects using l
             set auth_pass "$TGT_PASSWORD"
             if test -z "$auth_pass"; set auth_pass "$TGT_CRED_PASSWORD"; end
         end
-    end
 
     if test -z "$target"; echo "error: target is required"; return 1; end
     if test -z "$domain"; echo "error: domain is required"; return 1; end

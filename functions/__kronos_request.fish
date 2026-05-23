@@ -49,7 +49,7 @@ function __kronos_request --description "Request TGT or ST and export KRB5CCNAME
             set -l src_domain "Cache"
             if test -z "$def_domain"
                 set def_domain "$TGT_HOSTS[1]"; set src_domain "TGT_HOSTS"
-                if test -z "$def_domain"; set def_domain "$TGT_DC_DOMAIN"; set src_domain "TGT_DC_DOMAIN"; end
+                if test -z "$def_domain"; set def_domain "$TGT_HOSTS[1]"; set src_domain "TGT_HOSTS"; if test -z "$def_domain"; set def_domain "$TGT_DC_DOMAIN"; set src_domain "TGT_DC_DOMAIN"; end; end
             end
             if test -n "$domain"; set def_domain "$domain"; set src_domain "CLI Arg"; end
             set domain (__kronos_ask "Domain Name" "$def_domain" "$src_domain"); or return 1
@@ -85,7 +85,6 @@ function __kronos_request --description "Request TGT or ST and export KRB5CCNAME
             else
                 set spn ""
             end
-        end
     else
         # Quiet mode fallbacks
         if test -z "$target"; set target "$__KRONOS_CACHE_REQUEST_TARGET"; end
@@ -109,7 +108,6 @@ function __kronos_request --description "Request TGT or ST and export KRB5CCNAME
             if test -z "$pass"; and test -z "$hash"; set pass $TGT_PASSWORD; end
             if test -z "$pass"; and test -z "$hash"; set pass $TGT_CRED_PASSWORD; end
         end
-    end
 
     if test -z "$target"; echo "error: target is required"; return 1; end
     if test -z "$domain"; echo "error: domain is required"; return 1; end
@@ -149,4 +147,3 @@ function __kronos_request --description "Request TGT or ST and export KRB5CCNAME
         set -gx KRB5CCNAME "$PWD/$user.ccache"
         echo "[+] Ticket saved and exported to KRB5CCNAME=$KRB5CCNAME"
     end
-end

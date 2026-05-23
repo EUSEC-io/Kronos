@@ -80,7 +80,6 @@ function __kronos_forcechange --description "Force change a user's password usin
                 else
                     set auth_pass "$auth_input"; set auth_hash ""
                 end
-            end
 
             # Confirmation
             echo ""
@@ -93,8 +92,6 @@ function __kronos_forcechange --description "Force change a user's password usin
                 echo "Aborted."
                 return 1
             end
-        end
-    end
 
     if test -z "$target"; echo "error: target is required"; return 1; end
     if test -z "$target_user"; echo "error: target user is required"; return 1; end
@@ -120,7 +117,6 @@ function __kronos_forcechange --description "Force change a user's password usin
         else
             set -a cmd_list -p "$auth_pass"
         end
-    end
 
     set -a cmd_list set password "$target_user" "$new_pass"
 

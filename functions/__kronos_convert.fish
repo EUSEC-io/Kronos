@@ -38,12 +38,10 @@ function __kronos_convert --description "Convert tickets between kirbi and ccach
                 else if string match -q "*.ccache" "$input"
                     set output (string replace ".ccache" ".kirbi" "$input")
                 end
-            end
 
             set output (__kronos_ask "Output Ticket File" "$output"); or return 1
             set -U __KRONOS_CACHE_CONVERT_OUTPUT "$output"
         end
-    end
 
     if test -z "$input"; echo "error: input is required"; return 1; end
     if test -z "$output"; echo "error: output is required"; return 1; end

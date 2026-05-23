@@ -1,14 +1,15 @@
 # description: Create a new AD computer account using addcomputer.py
 function __kronos_add_computer --description "Create a new AD computer account using addcomputer.py"
-    argparse h/help u/username= p/password= H/hash= k/kerberos C/computer= P/computer-pass= q/quiet w/wizard X/edit-cmd -- $argv
+    argparse h/help u/username= p/password= H/hash= k/kerberos C/computer= P/computer-pass= q/quiet t/target= w/wizard X/edit-cmd -- $argv
     or return 1
 
     if set -q _flag_help
-        echo "Usage: kronos add-computer [TARGET] [OPTIONS]"
+        echo "Usage: kronos add-computer [OPTIONS]"
         echo ""
         echo "Create a new Active Directory computer account using impacket's addcomputer.py."
         echo ""
         echo "Options:"
+        echo "  -t, --target IP         Target DC IP or Hostname"
         echo "  -C, --computer NAME     The name of the new computer account"
         echo "  -P, --computer-pass PASS The password for the new computer"
         echo "  -u, --username USER     Auth username"
@@ -21,43 +22,28 @@ function __kronos_add_computer --description "Create a new AD computer account u
         return 0
     end
 
-    set -l target $argv[1]
+    set -l target $_flag_target
+    if test -z "$target"; set target $argv[1]; end
     set -l computer $_flag_computer
     set -l computer_pass $_flag_computer_pass
     set -l auth_user $_flag_username
     set -l auth_pass $_flag_password
     set -l auth_hash $_flag_hash
 
-    # Load defaults
-    if test -z "$target"
-        set target $__KRONOS_CACHE_ADDCOMP_TARGET
-        if test -z "$target"; set target $TGT_DC_IP; end
-        if test -z "$target"; set target $TGT_DC; end
-        if test -z "$target"; set target $TGT; end
-    end
-    if test -z "$computer"; set computer $__KRONOS_CACHE_ADDCOMP_NAME; end
-    if test -z "$computer_pass"; set computer_pass $__KRONOS_CACHE_ADDCOMP_PASS; end
-    if test -z "$auth_user"
-        set auth_user $__KRONOS_CACHE_ADDCOMP_AUTH_USER
-        if test -z "$auth_user"; set auth_user $TGT_USERNAME; end
-        if test -z "$auth_user"; set auth_user $TGT_CRED_USERNAME; end
-    end
-    if test -z "$auth_pass"; and test -z "$auth_hash"
-        set -l cached_auth "$__KRONOS_CACHE_ADDCOMP_AUTH_VAL"
-        if string match -rq '^[a-fA-F0-9]{32}:[a-fA-F0-9]{32}$|^[a-fA-F0-9]{32}$' -- "$cached_auth"
-            set auth_hash "$cached_auth"
-        else
-            set auth_pass "$cached_auth"
-        end
-        if test -z "$auth_pass"; and test -z "$auth_hash"; set auth_pass $TGT_PASSWORD; end
-        if test -z "$auth_pass"; and test -z "$auth_hash"; set auth_pass $TGT_CRED_PASSWORD; end
-    end
-
     if not set -q _flag_quiet
-        if test (count $argv) -eq 0; or set -q _flag_wizard
+        if test (count $argv) -eq 0 -o -z "$target"; or set -q _flag_wizard
             set_color cyan; echo "[*] Starting Add Computer wizard..."; set_color normal
 
-            set target (__kronos_ask "Target DC IP/Hostname" "$target"); or return 1
+            set -l def_target "$__KRONOS_CACHE_ADDCOMP_TARGET"
+            set -l src_target "Cache"
+            if test -z "$def_target"
+                set def_target "$TGT"; set src_target "TGT"
+                if test -z "$def_target"; set def_target "$TGT_DC_IP"; set src_target "TGT_DC_IP"; end
+                if test -z "$def_target"; set def_target "$TGT_DC"; set src_target "TGT_DC"; end
+                if test -z "$def_target"; set def_target "$TGT_HOSTS[1]"; set src_target "TGT_HOSTS"; end
+            end
+            if test -n "$target"; set def_target "$target"; set src_target "CLI Arg"; end
+            set target (__kronos_ask "Target DC IP/Hostname" "$def_target" "$src_target"); or return 1
             set -U __KRONOS_CACHE_ADDCOMP_TARGET "$target"
 
             set computer (__kronos_ask "Computer Name" "$computer"); or return 1
@@ -93,6 +79,22 @@ function __kronos_add_computer --description "Create a new AD computer account u
                 echo "Aborted."
                 return 1
             end
+        end
+    else
+        # Quiet mode fallbacks
+        if test -z "$target"; set target "$__KRONOS_CACHE_ADDCOMP_TARGET"; end
+        if test -z "$target"; set target $TGT; end
+        if test -z "$target"; set target $TGT_DC_IP; end
+        if test -z "$target"; set target $TGT_DC; end
+        if test -z "$target"; set target $TGT_HOSTS[1]; end
+
+        if test -z "$auth_user"
+            set auth_user "$TGT_USERNAME"
+            if test -z "$auth_user"; set auth_user "$TGT_CRED_USERNAME"; end
+        end
+        if test -z "$auth_pass"; and test -z "$auth_hash"
+            set auth_pass "$TGT_PASSWORD"
+            if test -z "$auth_pass"; set auth_pass "$TGT_CRED_PASSWORD"; end
         end
     end
 

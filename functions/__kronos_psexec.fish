@@ -54,7 +54,7 @@ function __kronos_psexec --description "Remote command execution via psexec.py"
             set -l src_domain "Cache"
             if test -z "$def_domain"
                 set def_domain "$TGT_HOSTS[1]"; set src_domain "TGT_HOSTS"
-                if test -z "$def_domain"; set def_domain "$TGT_DC_DOMAIN"; set src_domain "TGT_DC_DOMAIN"; end
+                if test -z "$def_domain"; set def_domain "$TGT_HOSTS[1]"; set src_domain "TGT_HOSTS"; if test -z "$def_domain"; set def_domain "$TGT_DC_DOMAIN"; set src_domain "TGT_DC_DOMAIN"; end; end
             end
             if test -n "$domain"; set def_domain "$domain"; set src_domain "CLI Arg"; end
             set domain (__kronos_ask "Domain Name" "$def_domain" "$src_domain"); or return 1
@@ -75,7 +75,6 @@ function __kronos_psexec --description "Remote command execution via psexec.py"
                 if test "$use_krb" = "yes"
                     set _flag_kerberos 1
                 end
-            end
 
             if not set -q _flag_kerberos
                 set -l def_auth_val "$auth_pass"
@@ -87,7 +86,6 @@ function __kronos_psexec --description "Remote command execution via psexec.py"
                 else
                     set auth_pass "$auth_input"; set auth_hash ""
                 end
-            end
 
             # Safety Confirmation
             echo ""
@@ -104,7 +102,6 @@ function __kronos_psexec --description "Remote command execution via psexec.py"
                 echo "Aborted."
                 return 1
             end
-        end
     else
         # Quiet mode fallbacks
         if test -z "$target"; set target "$__KRONOS_CACHE_PSEXEC_TARGET"; end
@@ -144,7 +141,6 @@ function __kronos_psexec --description "Remote command execution via psexec.py"
             if test -z "$auth_pass"; echo "error: password or hash required"; return 1; end
             set -a psexec_args "$domain/$auth_user:$auth_pass@$target"
         end
-    end
 
     set -l full_cmd "$impacket_cmd "(string join ' ' -- $psexec_args)
     if set -q _flag_edit_cmd

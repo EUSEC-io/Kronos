@@ -6,7 +6,6 @@ function __kronos_add_member --description "Add a user to an AD group using bloo
         if not set -q _flag_quiet
             set wizard 1
         end
-    end
 
     argparse h/help q/quiet u/username= p/password= k/kerberos g/group= m/member= X/edit-cmd w/wizard -- $argv
     or return 1
@@ -88,7 +87,6 @@ function __kronos_add_member --description "Add a user to an AD group using bloo
             echo "Aborted."
             return 1
         end
-    end
 
     # Validation
     if test -z "$target"; echo "error: target is required" >&2; return 1; end

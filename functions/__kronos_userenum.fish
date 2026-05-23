@@ -45,7 +45,6 @@ function __kronos_userenum --description "Run kerbrute userenum"
             set userlist (__kronos_ask "User List Path" "$userlist"); or return 1
             set -U __KRONOS_CACHE_USERENUM_USERLIST "$userlist"
         end
-    end
 
     if test -z "$target"; echo "error: target is required"; return 1; end
 
@@ -84,4 +83,3 @@ function __kronos_userenum --description "Run kerbrute userenum"
         echo "[+] Saved "(cat valid_users.txt | wc -l)" valid users to valid_users.txt"
         rm -f .kerbrute_out.txt
     end
-end

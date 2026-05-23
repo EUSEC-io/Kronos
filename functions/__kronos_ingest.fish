@@ -35,49 +35,46 @@ function __kronos_ingest --description "Ingest Active Directory data using blood
     set -l auth_hash $_flag_hash
     set -l outfile $_flag_output
 
-    # Load defaults
-    if test -z "$target"
-        set target $__KRONOS_CACHE_INGEST_TARGET
-        if test -z "$target"; set target $TGT_DC_IP; end
-        if test -z "$target"; set target $TGT_DC; end
-        if test -z "$target"; set target $TGT; end
-    end
-    if test -z "$domain"
-        set domain $__KRONOS_CACHE_INGEST_DOMAIN
-        if test -z "$domain"; set domain $TGT_DC_DOMAIN; end
-    end
-    if test -z "$auth_user"
-        set auth_user $__KRONOS_CACHE_INGEST_AUTH_USER
-        if test -z "$auth_user"; set auth_user $TGT_USERNAME; end
-        if test -z "$auth_user"; set auth_user $TGT_CRED_USERNAME; end
-    end
-    if test -z "$auth_pass"; and test -z "$auth_hash"
-        set -l cached_auth "$__KRONOS_CACHE_INGEST_AUTH_VAL"
-        if string match -rq '^[a-fA-F0-9]{32}:[a-fA-F0-9]{32}$|^[a-fA-F0-9]{32}$' -- "$cached_auth"
-            set auth_hash "$cached_auth"
-        else
-            set auth_pass "$cached_auth"
-        end
-        if test -z "$auth_pass"; and test -z "$auth_hash"; set auth_pass $TGT_PASSWORD; end
-        if test -z "$auth_pass"; and test -z "$auth_hash"; set auth_pass $TGT_CRED_PASSWORD; end
-    end
-
     if not set -q _flag_quiet
         if test "$wizard" -eq 1 -o -z "$target"; or set -q _flag_wizard
             set_color cyan; echo "[*] Starting Ingest wizard..."; set_color normal
 
-            set target (__kronos_ask "Target DC IP/Hostname" "$target"); or return 1
+            set -l def_target "$__KRONOS_CACHE_INGEST_TARGET"
+            set -l src_target "Cache"
+            if test -z "$def_target"
+                set def_target "$TGT"; set src_target "TGT"
+                if test -z "$def_target"; set def_target "$TGT_DC_IP"; set src_target "TGT_DC_IP"; end
+                if test -z "$def_target"; set def_target "$TGT_DC"; set src_target "TGT_DC"; end
+                if test -z "$def_target"; set def_target "$TGT_HOSTS[1]"; set src_target "TGT_HOSTS"; end
+            end
+            if test -n "$target"; set def_target "$target"; set src_target "CLI Arg"; end
+            set target (__kronos_ask "Target DC IP/Hostname" "$def_target" "$src_target"); or return 1
             set -U __KRONOS_CACHE_INGEST_TARGET "$target"
 
-            set domain (__kronos_ask "Domain Name" "$domain"); or return 1
+            set -l def_domain "$__KRONOS_CACHE_INGEST_DOMAIN"
+            set -l src_domain "Cache"
+            if test -z "$def_domain"
+                set def_domain "$TGT_HOSTS[1]"; set src_domain "TGT_HOSTS"
+                if test -z "$def_domain"; set def_domain "$TGT_HOSTS[1]"; set src_domain "TGT_HOSTS"; if test -z "$def_domain"; set def_domain "$TGT_DC_DOMAIN"; set src_domain "TGT_DC_DOMAIN"; end; end
+            end
+            if test -n "$domain"; set def_domain "$domain"; set src_domain "CLI Arg"; end
+            set domain (__kronos_ask "Domain Name" "$def_domain" "$src_domain"); or return 1
             set -U __KRONOS_CACHE_INGEST_DOMAIN "$domain"
 
             if not set -q _flag_kerberos
-                set auth_user (__kronos_ask "Auth Username" "$auth_user"); or return 1
+                set -l def_auth_user "$__KRONOS_CACHE_INGEST_AUTH_USER"
+                set -l src_user "Cache"
+                if test -z "$def_auth_user"
+                    set def_auth_user "$TGT_USERNAME"; set src_user "TGT_USERNAME"
+                    if test -z "$def_auth_user"; set def_auth_user "$TGT_CRED_USERNAME"; set src_user "TGT_CRED_USERNAME"; end
+                end
+                if test -n "$auth_user"; set def_auth_user "$auth_user"; set src_user "CLI Arg"; end
+                set auth_user (__kronos_ask "Auth Username" "$def_auth_user" "$src_user"); or return 1
                 set -U __KRONOS_CACHE_INGEST_AUTH_USER "$auth_user"
 
                 set -l def_auth_val "$auth_pass"
                 if test -n "$auth_hash"; set def_auth_val "$auth_hash"; end
+                if test -z "$def_auth_val"; set def_auth_val "$TGT_PASSWORD"; end
                 set -l auth_input (__kronos_ask "Auth Password or Hash" "$def_auth_val"); or return 1
                 set -U __KRONOS_CACHE_INGEST_AUTH_VAL "$auth_input"
                 if string match -rq '^[a-fA-F0-9]{32}:[a-fA-F0-9]{32}$|^[a-fA-F0-9]{32}$' -- "$auth_input"
@@ -85,12 +82,26 @@ function __kronos_ingest --description "Ingest Active Directory data using blood
                 else
                     set auth_pass "$auth_input"; set auth_hash ""
                 end
-            end
 
             set -l def_out "$domain-bloodhound.zip"
             if test -n "$outfile"; set def_out "$outfile"; end
             set outfile (__kronos_ask "Output Zip Name" "$def_out"); or return 1
         end
+    else
+        # Quiet mode fallbacks
+        if test -z "$target"; set target "$__KRONOS_CACHE_INGEST_TARGET"; end
+        if test -z "$target"; set target $TGT; end
+        if test -z "$target"; set target $TGT_DC_IP; end
+        if test -z "$target"; set target $TGT_DC; end
+        if test -z "$target"; set target $TGT_HOSTS[1]; end
+
+        if test -z "$domain"; set domain "$__KRONOS_CACHE_INGEST_DOMAIN"; end
+        if test -z "$domain"; set domain $TGT_HOSTS[1]; end
+        if test -z "$domain"; set domain "$TGT_DC_DOMAIN"; end
+
+        if test -z "$auth_user"; set auth_user "$__KRONOS_CACHE_INGEST_AUTH_USER"; end
+        if test -z "$auth_user"; set auth_user "$TGT_USERNAME"; end
+        if test -z "$auth_user"; set auth_user "$TGT_CRED_USERNAME"; end
     end
 
     if test -z "$target"; echo "error: target is required"; return 1; end
@@ -110,7 +121,6 @@ function __kronos_ingest --description "Ingest Active Directory data using blood
         else
             set bh_cmd "$bh_cmd -p \"$auth_pass\""
         end
-    end
 
     if set -q _flag_edit_cmd
         set bh_cmd (__kronos_edit_cmd "$bh_cmd"); or return 1
@@ -135,4 +145,3 @@ function __kronos_ingest --description "Ingest Active Directory data using blood
         echo "error: bloodhound-python encountered an error." >&2
         return 1
     end
-end

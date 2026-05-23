@@ -26,7 +26,6 @@ function __kronos_add_user --description "Create a new AD user using bloodyAD"
         if not set -q _flag_quiet
             set wizard 1
         end
-    end
 
     set -l target $argv[1]
     set -l new_user $_flag_new_user
@@ -85,7 +84,6 @@ function __kronos_add_user --description "Create a new AD user using bloodyAD"
             echo "Aborted."
             return 1
         end
-    end
 
     if test -z "$target"; echo "error: target is required"; return 1; end
     if test -z "$new_user"; echo "error: new user is required"; return 1; end

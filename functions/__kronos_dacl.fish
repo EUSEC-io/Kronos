@@ -69,7 +69,6 @@ function __kronos_dacl --description "Manipulate AD object DACLs using bloodyAD"
             set action (__kronos_ask "Action (add, remove, set)" "$action"); or return 1
             set permission (__kronos_ask "Permission (genericAll, dcsync, owner, all)" "$permission"); or return 1
         end
-    end
 
     if test -z "$target"; echo "error: target DC is required" >&2; return 1; end
     if test -z "$target_obj"; echo "error: --target-object is required" >&2; return 1; end

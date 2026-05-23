@@ -49,7 +49,7 @@ function __kronos_asrep_roast --description "Run AS-REP Roasting using GetNPUser
             set -l src_domain "Cache"
             if test -z "$def_domain"
                 set def_domain "$TGT_HOSTS[1]"; set src_domain "TGT_HOSTS"
-                if test -z "$def_domain"; set def_domain "$TGT_DC_DOMAIN"; set src_domain "TGT_DC_DOMAIN"; end
+                if test -z "$def_domain"; set def_domain "$TGT_HOSTS[1]"; set src_domain "TGT_HOSTS"; if test -z "$def_domain"; set def_domain "$TGT_DC_DOMAIN"; set src_domain "TGT_DC_DOMAIN"; end; end
             end
             if test -n "$domain"; set def_domain "$domain"; set src_domain "CLI Arg"; end
             set domain (__kronos_ask "Domain Name" "$def_domain" "$src_domain"); or return 1
@@ -68,12 +68,13 @@ function __kronos_asrep_roast --description "Run AS-REP Roasting using GetNPUser
     else
         # Quiet mode fallbacks
         if test -z "$target"; set target "$__KRONOS_CACHE_ASREP_TARGET"; end
-        if test -z "$target"; set target $TGT_HOSTS[1]; end
+        if test -z "$target"; set target $TGT; end
         if test -z "$target"; set target $TGT_DC_IP; end
         if test -z "$target"; set target $TGT_DC; end
-        if test -z "$target"; set target $TGT; end
+        if test -z "$target"; set target $TGT_HOSTS[1]; end
 
         if test -z "$domain"; set domain "$__KRONOS_CACHE_ASREP_DOMAIN"; end
+        if test -z "$domain"; set domain $TGT_HOSTS[1]; end
         if test -z "$domain"; set domain "$TGT_DC_DOMAIN"; end
 
         if test -z "$user"; set user "$__KRONOS_CACHE_ASREP_USER"; end
