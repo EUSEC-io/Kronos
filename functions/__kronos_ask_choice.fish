@@ -29,3 +29,4 @@ function __kronos_ask_choice --description "Pick one of $choices using gum or re
         end
         echo "    invalid; expected one of: $joined" >&2
     end
+end

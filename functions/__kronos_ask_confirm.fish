@@ -19,6 +19,7 @@ function __kronos_ask_confirm --description "Ask a yes/no question using gum or 
             case '*'
                 return $rc
         end
+    end
 
     set -l prompt "  $label "
     if test "$default_yn" = y; set prompt "$prompt(Y/n): "; else; set prompt "$prompt(y/N): "; end
@@ -39,3 +40,6 @@ function __kronos_ask_confirm --description "Ask a yes/no question using gum or 
                 echo no
                 return 0
         end
+        echo "    invalid; expected yes/no" >&2
+    end
+end
