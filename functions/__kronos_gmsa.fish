@@ -27,7 +27,7 @@ function __kronos_gmsa --description "Read GMSA passwords using nxc ldap"
     set -l auth_hash $_flag_hash
 
     if not set -q _flag_quiet
-        if test "$wizard" -eq 1 -o -z "$target" -o set -q _flag_wizard
+        if test "$wizard" -eq 1 -o -z "$target"; or set -q _flag_wizard
             set_color cyan; echo "[*] Starting GMSA wizard..."; set_color normal
 
             set -l def_target "$__KRONOS_CACHE_GMSA_TARGET"

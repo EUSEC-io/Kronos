@@ -63,7 +63,7 @@ function __kronos_ingest --description "Ingest Active Directory data using blood
     end
 
     if not set -q _flag_quiet
-        if test "$wizard" -eq 1 -o -z "$target" -o set -q _flag_wizard
+        if test "$wizard" -eq 1 -o -z "$target"; or set -q _flag_wizard
             set_color cyan; echo "[*] Starting Ingest wizard..."; set_color normal
 
             set target (__kronos_ask "Target DC IP/Hostname" "$target"); or return 1

@@ -29,7 +29,7 @@ function __kronos_dominfo --description "Query domain info and password policy"
     if set -q _flag_pass_policy; set pass_pol 1; end
 
     if not set -q _flag_quiet
-        if test "$wizard" -eq 1 -o -z "$target" -o set -q _flag_wizard
+        if test "$wizard" -eq 1 -o -z "$target"; or set -q _flag_wizard
             set_color cyan; echo "[*] Starting DomInfo wizard..."; set_color normal
 
             set -l def_target "$__KRONOS_CACHE_DOMINFO_TARGET"

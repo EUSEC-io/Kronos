@@ -30,7 +30,7 @@ function __kronos_request --description "Request TGT or ST and export KRB5CCNAME
     set -l spn $_flag_spn
 
     if not set -q _flag_quiet
-        if test "$wizard" -eq 1 -o -z "$target" -o set -q _flag_wizard
+        if test "$wizard" -eq 1 -o -z "$target"; or set -q _flag_wizard
             set_color cyan; echo "[*] Starting Ticket Request wizard..."; set_color normal
 
             set -l def_target "$__KRONOS_CACHE_REQUEST_TARGET"

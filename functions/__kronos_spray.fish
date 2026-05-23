@@ -24,7 +24,7 @@ function __kronos_spray --description "Password spray using nxc smb"
     set -l password $_flag_password
 
     if not set -q _flag_quiet
-        if test (count $argv) -eq 0 -o -z "$target" -o set -q _flag_wizard
+        if test (count $argv) -eq 0 -o -z "$target"; or set -q _flag_wizard
             set_color cyan; echo "[*] Starting Spray wizard..."; set_color normal
 
             set -l def_target "$__KRONOS_CACHE_SPRAY_TARGET"

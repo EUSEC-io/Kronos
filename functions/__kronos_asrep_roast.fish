@@ -30,7 +30,7 @@ function __kronos_asrep_roast --description "Run AS-REP Roasting using GetNPUser
     set -l user $_flag_username
 
     if not set -q _flag_quiet
-        if test "$wizard" -eq 1 -o -z "$target" -o set -q _flag_wizard
+        if test "$wizard" -eq 1 -o -z "$target"; or set -q _flag_wizard
             set_color cyan; echo "[*] Starting AS-REP Roast wizard..."; set_color normal
 
             set -l def_target "$__KRONOS_CACHE_ASREP_TARGET"
