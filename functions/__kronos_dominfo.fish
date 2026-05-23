@@ -1,21 +1,25 @@
-# description: Query domain info and password policy
-function __kronos_dominfo --description "Query domain info and password policy"
+# description: Query domain info, users, groups, and shares
+function __kronos_dominfo --description "Query domain info, users, groups, and shares"
     set -l wizard 0
     if test (count $argv) -eq 0
         set wizard 1
     end
 
-    argparse t/target= h/help q/quiet P/pass-policy u/username= p/password= N/NULL k/kerberos X/edit-cmd w/wizard -- $argv
+    argparse t/target= h/help q/quiet P/pass-policy U/users G/groups L/loggedon S/shares u/username= p/password= N/NULL k/kerberos X/edit-cmd w/wizard -- $argv
     or return 1
 
     if set -q _flag_help
         echo "Usage: kronos dominfo [OPTIONS]"
         echo ""
-        echo "Query domain info and password policy using rpcclient (null session) or nxc (credentialed)."
+        echo "Query domain info and enumerate objects using rpcclient or nxc."
         echo ""
         echo "Options:"
         echo "  -t, --target IP     Target DC IP or Hostname"
-        echo "  -P, --pass-policy   Also query password policy"
+        echo "  -P, --pass-policy   Query password policy"
+        echo "  -U, --users         List domain users"
+        echo "  -G, --groups        List domain groups"
+        echo "  -L, --loggedon      List logged on users"
+        echo "  -S, --shares        List shares"
         echo "  -u, --username USER Auth username"
         echo "  -p, --password PASS Auth password"
         echo "  -N, --NULL          Force NULL session enumeration"
@@ -30,25 +34,45 @@ function __kronos_dominfo --description "Query domain info and password policy"
     if test -z "$target"; set target $argv[1]; end
     set -l auth_user $_flag_username
     set -l auth_pass $_flag_password
+    
     set -l pass_pol 0
     if set -q _flag_pass_policy; set pass_pol 1; end
+    set -l list_users 0
+    if set -q _flag_users; set list_users 1; end
+    set -l list_groups 0
+    if set -q _flag_groups; set list_groups 1; end
+    set -l list_loggedon 0
+    if set -q _flag_loggedon; set list_loggedon 1; end
+    set -l list_shares 0
+    if set -q _flag_shares; set list_shares 1; end
+
+    # Load defaults
+    if test -z "$target"
+        set -l def_target "$__KRONOS_CACHE_DOMINFO_TARGET"
+        set -l src_target "Cache"
+        if test -z "$def_target"
+            set def_target "$TGT"; set src_target "TGT"
+            if test -z "$def_target"; set def_target "$TGT_DC_IP"; set src_target "TGT_DC_IP"; end
+            if test -z "$def_target"; set def_target "$TGT_DC"; set src_target "TGT_DC"; end
+            if test -z "$def_target"; set def_target "$TGT_HOSTS[1]"; set src_target "TGT_HOSTS"; end
+        end
+        if test -n "$target"; set def_target "$target"; set src_target "CLI Arg"; end
+        
+        if not set -q _flag_quiet
+            if test "$wizard" -eq 1 -o -z "$target"; or set -q _flag_wizard
+                set_color cyan; echo "[*] Starting DomInfo wizard..."; set_color normal
+                set target (__kronos_ask "Target DC IP/Hostname" "$def_target" "$src_target"); or return 1
+                set -U __KRONOS_CACHE_DOMINFO_TARGET "$target"
+            else
+                set target "$def_target"
+            end
+        else
+            set target "$def_target"
+        end
+    end
 
     if not set -q _flag_quiet
-        if test "$wizard" -eq 1 -o -z "$target"; or set -q _flag_wizard
-            set_color cyan; echo "[*] Starting DomInfo wizard..."; set_color normal
-
-            set -l def_target "$__KRONOS_CACHE_DOMINFO_TARGET"
-            set -l src_target "Cache"
-            if test -z "$def_target"
-                set def_target "$TGT"; set src_target "TGT"
-                if test -z "$def_target"; set def_target "$TGT_DC_IP"; set src_target "TGT_DC_IP"; end
-                if test -z "$def_target"; set def_target "$TGT_DC"; set src_target "TGT_DC"; end
-                if test -z "$def_target"; set def_target "$TGT_HOSTS[1]"; set src_target "TGT_HOSTS"; end
-            end
-            if test -n "$target"; set def_target "$target"; set src_target "CLI Arg"; end
-            set target (__kronos_ask "Target DC IP/Hostname" "$def_target" "$src_target"); or return 1
-            set -U __KRONOS_CACHE_DOMINFO_TARGET "$target"
-
+        if test "$wizard" -eq 1; or set -q _flag_wizard
             set -l mode "NULL Session"
             if set -q _flag_kerberos; set mode "Kerberos"; end
             if test -n "$auth_user"; and test -n "$auth_pass"; set mode "Credentials"; end
@@ -85,20 +109,19 @@ function __kronos_dominfo --description "Query domain info and password policy"
                 set -e _flag_kerberos
             end
 
-            set -l pol_choice (__kronos_ask_confirm "Query password policy?" (test "$pass_pol" -eq 1; and echo "y"; or echo "n")); or return 1
-            if test "$pol_choice" = "yes"
-                set pass_pol 1
-            else
-                set pass_pol 0
-            end
+            if test (__kronos_ask_confirm "Query password policy?" (test "$pass_pol" -eq 1; and echo "y"; or echo "n")) = "yes"
+                set pass_pol 1; end
+            if test (__kronos_ask_confirm "List domain users?" (test "$list_users" -eq 1; and echo "y"; or echo "n")) = "yes"
+                set list_users 1; end
+            if test (__kronos_ask_confirm "List domain groups?" (test "$list_groups" -eq 1; and echo "y"; or echo "n")) = "yes"
+                set list_groups 1; end
+            if test (__kronos_ask_confirm "List logged on users?" (test "$list_loggedon" -eq 1; and echo "y"; or echo "n")) = "yes"
+                set list_loggedon 1; end
+            if test (__kronos_ask_confirm "List shares?" (test "$list_shares" -eq 1; and echo "y"; or echo "n")) = "yes"
+                set list_shares 1; end
         end
     else
         # Quiet mode fallbacks
-        if test -z "$target"; set target "$__KRONOS_CACHE_DOMINFO_TARGET"; end
-        if test -z "$target"; set target $TGT; end
-        if test -z "$target"; set target $TGT_HOSTS[1]; end
-        if test -z "$target"; set target $TGT_DC_IP; end
-        
         if test -z "$auth_user"
             set auth_user "$TGT_USERNAME"
             if test -z "$auth_user"; set auth_user "$TGT_CRED_USERNAME"; end
@@ -127,22 +150,25 @@ function __kronos_dominfo --description "Query domain info and password policy"
             set nxc_cmd "$nxc_cmd -u \"$auth_user\" -p \"$auth_pass\""
         end
 
-        if test "$pass_pol" -eq 1
-            set nxc_cmd "$nxc_cmd --pass-pol"
-        end
+        if test "$pass_pol" -eq 1; set nxc_cmd "$nxc_cmd --pass-pol"; end
+        if test "$list_users" -eq 1; set nxc_cmd "$nxc_cmd --users"; end
+        if test "$list_groups" -eq 1; set nxc_cmd "$nxc_cmd --groups"; end
+        if test "$list_loggedon" -eq 1; set nxc_cmd "$nxc_cmd --loggedon-users"; end
+        if test "$list_shares" -eq 1; set nxc_cmd "$nxc_cmd --shares"; end
         
         if set -q _flag_edit_cmd
             set nxc_cmd (__kronos_edit_cmd "$nxc_cmd"); or return 1
         end
 
-        echo "[*] Querying dominfo via nxc smb..."
+        echo "[*] Querying domain info via nxc smb..."
         eval $nxc_cmd
     else
         __kronos_check_dep rpcclient; or return 1
         set -l rpc_cmds "querydominfo"
-        if test "$pass_pol" -eq 1
-            set rpc_cmds "$rpc_cmds; getdompwinfo"
-        end
+        if test "$pass_pol" -eq 1; set rpc_cmds "$rpc_cmds; getdompwinfo"; end
+        if test "$list_users" -eq 1; set rpc_cmds "$rpc_cmds; enumdomusers"; end
+        if test "$list_groups" -eq 1; set rpc_cmds "$rpc_cmds; enumdomgroups"; end
+        if test "$list_shares" -eq 1; set rpc_cmds "$rpc_cmds; netshareenum"; end
         
         set -l rpc_cmd "rpcclient -U \"\" -N \"$target\" -c \"$rpc_cmds\""
         
@@ -150,7 +176,7 @@ function __kronos_dominfo --description "Query domain info and password policy"
             set rpc_cmd (__kronos_edit_cmd "$rpc_cmd"); or return 1
         end
 
-        echo "[*] Querying dominfo via rpcclient (null session)..."
+        echo "[*] Querying domain info via rpcclient (null session)..."
         eval $rpc_cmd
     end
 end
