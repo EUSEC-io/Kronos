@@ -64,22 +64,25 @@ function __kronos_asrep_roast --description "Run AS-REP Roasting using GetNPUser
             if test -n "$user"; set def_user "$user"; set src_user "CLI Arg"; end
             set user (__kronos_ask "User to Roast" "$def_user" "$src_user"); or return 1
             set -U __KRONOS_CACHE_ASREP_USER "$user"
+
+            if not set -q _flag_kerberos
+                set -l def_auth_val "$__KRONOS_CACHE_ASREP_AUTH_VAL"
+                set -l src_auth_val "Cache"
+                if test -z "$def_auth_val"
+                    set def_auth_val "$TGT_PASSWORD"; set src_auth_val "TGT_PASSWORD"
+                    if test -z "$def_auth_val"; set def_auth_val "$TGT_CRED_PASSWORD"; set src_auth_val "TGT_CRED_PASSWORD"; end
+                end
+                set -l auth_input (__kronos_ask "Auth Password or Hash" "$def_auth_val" "$src_auth_val"); or return 1
+                set -U __KRONOS_CACHE_ASREP_AUTH_VAL "$auth_input"
+            end
         end
     else
         # Quiet mode fallbacks
         if test -z "$target"; set target "$__KRONOS_CACHE_ASREP_TARGET"; end
         if test -z "$target"; set target $TGT; end
-        if test -z "$target"; set target $TGT_DC_IP; end
-        if test -z "$target"; set target $TGT_DC; end
-        if test -z "$target"; set target $TGT_HOSTS[1]; end
-
         if test -z "$domain"; set domain "$__KRONOS_CACHE_ASREP_DOMAIN"; end
-        if test -z "$domain"; set domain $TGT_HOSTS[1]; end
-        if test -z "$domain"; set domain "$TGT_DC_DOMAIN"; end
-
         if test -z "$user"; set user "$__KRONOS_CACHE_ASREP_USER"; end
         if test -z "$user"; set user "$TGT_USERNAME"; end
-        if test -z "$user"; set user "$TGT_CRED_USERNAME"; end
     end
     
     if test -z "$target"; echo "error: target is required"; return 1; end

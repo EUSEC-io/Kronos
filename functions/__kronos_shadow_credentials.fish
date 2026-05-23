@@ -59,9 +59,15 @@ function __kronos_shadow_credentials --description "Shadow Credentials attack (K
                 set auth_user (__kronos_ask "Auth Username" "$def_auth_user" "$src_user"); or return 1
                 set -U __KRONOS_CACHE_SHADOW_AUTH_USER "$auth_user"
 
-                set -l def_auth_val "$auth_pass"
-                if test -z "$def_auth_val"; set def_auth_val "$TGT_PASSWORD"; end
-                set auth_pass (__kronos_ask "Auth Password" "$def_auth_val"); or return 1
+                set -l def_auth_val "$__KRONOS_CACHE_SHADOW_AUTH_VAL"
+                set -l src_auth_val "Cache"
+                if test -z "$def_auth_val"
+                    set def_auth_val "$TGT_PASSWORD"; set src_auth_val "TGT_PASSWORD"
+                    if test -z "$def_auth_val"; set def_auth_val "$TGT_CRED_PASSWORD"; set src_auth_val "TGT_CRED_PASSWORD"; end
+                end
+                if test -n "$auth_pass"; set def_auth_val "$auth_pass"; set src_auth_val "CLI Pass"; end
+                if test -n "$auth_hash"; set def_auth_val "$auth_hash"; set src_auth_val "CLI Hash"; end
+                set auth_pass (__kronos_ask "Auth Password" "$def_auth_val" "$src_auth_val"); or return 1
                 set -U __KRONOS_CACHE_SHADOW_AUTH_PASS "$auth_pass"
             end
 

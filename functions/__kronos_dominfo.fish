@@ -60,9 +60,14 @@ function __kronos_dominfo --description "Query domain info and password policy"
                 set auth_user (__kronos_ask "Auth Username" "$def_auth_user" "$src_user"); or return 1
                 set -U __KRONOS_CACHE_DOMINFO_AUTH_USER "$auth_user"
 
-                set -l def_auth_val "$auth_pass"
-                if test -z "$def_auth_val"; set def_auth_val "$TGT_PASSWORD"; end
-                set auth_pass (__kronos_ask "Auth Password" "$def_auth_val"); or return 1
+                set -l def_auth_val "$__KRONOS_CACHE_DOMINFO_AUTH_PASS"
+                set -l src_auth_val "Cache"
+                if test -z "$def_auth_val"
+                    set def_auth_val "$TGT_PASSWORD"; set src_auth_val "TGT_PASSWORD"
+                    if test -z "$def_auth_val"; set def_auth_val "$TGT_CRED_PASSWORD"; set src_auth_val "TGT_CRED_PASSWORD"; end
+                end
+                if test -n "$auth_pass"; set def_auth_val "$auth_pass"; set src_auth_val "CLI Pass"; end
+                set auth_pass (__kronos_ask "Auth Password" "$def_auth_val" "$src_auth_val")
                 set -U __KRONOS_CACHE_DOMINFO_AUTH_PASS "$auth_pass"
                 set -e _flag_NULL
                 set -e _flag_kerberos
