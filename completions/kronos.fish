@@ -3,6 +3,7 @@
 set -l commands userenum dominfo ingest connect asrep-roast kerberoast spray forcechange gmsa ticket convert request lookupsid add-user add-member add-computer dacl search secretsdump psexec rbcd shadow-credentials install reset help
 set -l protocols rdp winrm ftp smb rpc mssql
 set -l ticket_types golden silver diamond sapphire trust cross-forest
+set -l dominfo_cmds users groups shares policy loggedon
 
 # Disable file completions unless explicitly allowed
 complete -c kronos -f
@@ -34,6 +35,13 @@ complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a install -d 
 complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a reset -d "Clear all persistent cache variables"
 complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a help -d "Show help menu"
 
+# Dominfo subcommands
+complete -c kronos -n "__fish_seen_subcommand_from dominfo" -a users -d "List domain users"
+complete -c kronos -n "__fish_seen_subcommand_from dominfo" -a groups -d "List domain groups"
+complete -c kronos -n "__fish_seen_subcommand_from dominfo" -a shares -d "List shares"
+complete -c kronos -n "__fish_seen_subcommand_from dominfo" -a policy -d "Query password policy"
+complete -c kronos -n "__fish_seen_subcommand_from dominfo" -a loggedon -d "List logged on users"
+
 # Connect subcommands
 complete -c kronos -n "__fish_seen_subcommand_from connect; and not __fish_seen_subcommand_from $protocols" -a rdp -d "Connect via RDP (xfreerdp3)"
 complete -c kronos -n "__fish_seen_subcommand_from connect; and not __fish_seen_subcommand_from $protocols" -a winrm -d "Connect via WinRM (evil-winrm)"
@@ -51,14 +59,14 @@ complete -c kronos -n "__fish_seen_subcommand_from ticket; and not __fish_seen_s
 complete -c kronos -n "__fish_seen_subcommand_from ticket; and not __fish_seen_subcommand_from $ticket_types" -a cross-forest -d "Create Cross-Forest Golden Ticket"
 
 # Universal Flags
-set -l all_cmds $commands $protocols $ticket_types
+set -l all_cmds $commands $protocols $ticket_types $dominfo_cmds
 complete -c kronos -n "__fish_seen_subcommand_from $all_cmds" -s h -l help -d "Show help"
 complete -c kronos -n "__fish_seen_subcommand_from $all_cmds" -s q -l quiet -d "Skip prompts and use cached values"
 complete -c kronos -n "__fish_seen_subcommand_from $all_cmds" -s X -l edit-cmd -d "Inspect and edit command before execution"
 complete -c kronos -n "__fish_seen_subcommand_from $all_cmds" -s t -l target -r -d "Target IP or Hostname"
 
 # Shared Auth Flags
-set -l needs_auth userenum dominfo connect asrep-roast kerberoast forcechange gmsa lookupsid ingest request add-user add-member add-computer dacl search secretsdump psexec rbcd shadow-credentials ticket rdp winrm ftp smb rpc mssql
+set -l needs_auth userenum dominfo connect asrep-roast kerberoast forcechange gmsa lookupsid ingest request add-user add-member add-computer dacl search secretsdump psexec rbcd shadow-credentials ticket rdp winrm ftp smb rpc mssql $dominfo_cmds
 complete -c kronos -n "__fish_seen_subcommand_from $needs_auth" -s u -l username -r -d "Username"
 complete -c kronos -n "__fish_seen_subcommand_from $needs_auth" -s p -l password -r -d "Password"
 complete -c kronos -n "__fish_seen_subcommand_from $needs_auth" -s H -l hash -r -d "NTLM Hash"
