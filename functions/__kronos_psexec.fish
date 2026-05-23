@@ -41,10 +41,10 @@ function __kronos_psexec --description "Remote command execution via psexec.py"
             set -l def_target "$__KRONOS_CACHE_PSEXEC_TARGET"
             set -l src_target "Cache"
             if test -z "$def_target"
-                set def_target "$TGT_HOSTS[1]"; set src_target "TGT_HOSTS"
+                set def_target "$TGT"; set src_target "TGT"
                 if test -z "$def_target"; set def_target "$TGT_DC_IP"; set src_target "TGT_DC_IP"; end
                 if test -z "$def_target"; set def_target "$TGT_DC"; set src_target "TGT_DC"; end
-                if test -z "$def_target"; set def_target "$TGT"; set src_target "TGT"; end
+                if test -z "$def_target"; set def_target "$TGT_HOSTS[1]"; set src_target "TGT_HOSTS"; end
             end
             if test -n "$target"; set def_target "$target"; set src_target "CLI Arg"; end
             set target (__kronos_ask "Target IP or FQDN" "$def_target" "$src_target"); or return 1
@@ -53,7 +53,8 @@ function __kronos_psexec --description "Remote command execution via psexec.py"
             set -l def_domain "$__KRONOS_CACHE_PSEXEC_DOMAIN"
             set -l src_domain "Cache"
             if test -z "$def_domain"
-                set def_domain "$TGT_DC_DOMAIN"; set src_domain "TGT_DC_DOMAIN"
+                set def_domain "$TGT_HOSTS[1]"; set src_domain "TGT_HOSTS"
+                if test -z "$def_domain"; set def_domain "$TGT_DC_DOMAIN"; set src_domain "TGT_DC_DOMAIN"; end
             end
             if test -n "$domain"; set def_domain "$domain"; set src_domain "CLI Arg"; end
             set domain (__kronos_ask "Domain Name" "$def_domain" "$src_domain"); or return 1
