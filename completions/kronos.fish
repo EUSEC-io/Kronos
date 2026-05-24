@@ -1,6 +1,6 @@
 # completions/kronos.fish
 
-set -l commands userenum dominfo dnsdump ingest connect asrep-roast kerberoast spray forcechange gmsa ticket convert request lookupsid add-user add-member add-computer dacl search secretsdump psexec rbcd shadow-credentials install reset help
+set -l commands userenum dominfo dnsdump gpp ingest connect asrep-roast kerberoast spray forcechange gmsa ticket convert request lookupsid add-user add-member add-computer dacl search secretsdump psexec rbcd shadow-credentials install reset help
 set -l protocols rdp winrm ftp smb rpc mssql
 set -l ticket_types golden silver diamond sapphire trust cross-forest bronze
 set -l dominfo_cmds users groups shares policy loggedon
@@ -12,6 +12,7 @@ complete -c kronos -f
 complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a userenum -d "Run kerbrute userenum"
 complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a dominfo -d "Query domain info and enumerate objects"
 complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a dnsdump -d "Dump all DNS records from AD (adidnsdump)"
+complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a gpp -d "Extract GPP passwords and Autologon registries"
 complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a ingest -d "Ingest AD data using bloodhound-python"
 complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a connect -d "Connect to target via specific protocol"
 complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a asrep-roast -d "AS-REP Roasting (GetNPUsers.py)"
@@ -77,6 +78,8 @@ complete -c kronos -n "__fish_seen_subcommand_from $needs_auth" -s k -l kerberos
 # Subcommand-specific flags
 complete -c kronos -n "__fish_seen_subcommand_from userenum" -s w -l wordlist -r -d "Custom wordlist"
 complete -c kronos -n "__fish_seen_subcommand_from dnsdump" -s r -l resolve -d "Resolve all records"
+complete -c kronos -n "__fish_seen_subcommand_from gpp" -s m -l gpp-password -d "Scan for GPP passwords"
+complete -c kronos -n "__fish_seen_subcommand_from gpp" -s a -l autologin -d "Scan for Autologon registries"
 complete -c kronos -n "__fish_seen_subcommand_from add-user" -s U -l new-user -r -d "New username"
 complete -c kronos -n "__fish_seen_subcommand_from add-user" -s P -l new-password -r -d "New password"
 complete -c kronos -n "__fish_seen_subcommand_from add-member" -s g -l group -r -d "Target group"

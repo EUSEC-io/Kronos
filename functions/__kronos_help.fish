@@ -34,6 +34,7 @@ function __kronos_help --description "Global help for Kronos"
     echo "  userenum    Run kerbrute userenum (auto-saves valid_users.txt)"
     echo "  dominfo     Query domain info and enumerate objects"
     echo "  dnsdump     Dump all DNS records from AD (adidnsdump)"
+  gpp         Extract GPP passwords and Autologon registries
     echo "  ingest      Ingest AD data using bloodhound-python"
     echo "  connect     Connect via protocols (rdp, winrm, smb, rpc, ftp, mssql)"
     echo "  search      Search and enumerate AD objects (bloodyAD)"
