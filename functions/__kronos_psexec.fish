@@ -34,100 +34,106 @@ function __kronos_psexec --description "Remote command execution via psexec.py"
     set -l auth_pass $_flag_password
     set -l auth_hash $_flag_hash
 
-    if not set -q _flag_quiet
-        if test "$wizard" -eq 1 -o -z "$target" -o set -q _flag_wizard
-            set_color cyan; echo "[*] Starting PsExec wizard..."; set_color normal
+    # Target Priority: Cache -> $TGT -> $TGT_DC_IP -> $TGT_DC -> $TGT_HOSTS[1]
+    set -l def_target "$__KRONOS_CACHE_PSEXEC_TARGET"
+    set -l src_target "Cache"
+    if test -z "$def_target"; set def_target "$TGT"; set src_target "TGT"; end
+    if test -z "$def_target"; set def_target "$TGT_DC_IP"; set src_target "TGT_DC_IP"; end
+    if test -z "$def_target"; set def_target "$TGT_DC"; set src_target "TGT_DC"; end
+    if test -z "$def_target"; set def_target "$TGT_HOSTS[1]"; set src_target "TGT_HOSTS"; end
 
-            set -l def_target "$__KRONOS_CACHE_PSEXEC_TARGET"
-            set -l src_target "Cache"
-            if test -z "$def_target"
-                set def_target "$TGT_HOSTS[1]"; set src_target "TGT_HOSTS"
-                if test -z "$def_target"; set def_target "$TGT_DC_IP"; set src_target "TGT_DC_IP"; end
-                if test -z "$def_target"; set def_target "$TGT_DC"; set src_target "TGT_DC"; end
-                if test -z "$def_target"; set def_target "$TGT"; set src_target "TGT"; end
-            end
-            if test -n "$target"; set def_target "$target"; set src_target "CLI Arg"; end
-            set target (__kronos_ask "Target IP or FQDN" "$def_target" "$src_target"); or return 1
-            set -U __KRONOS_CACHE_PSEXEC_TARGET "$target"
+    # Domain Priority: Cache -> $TGT_HOSTS[1] -> $TGT_DC_DOMAIN
+    set -l def_domain "$__KRONOS_CACHE_PSEXEC_DOMAIN"
+    set -l src_domain "Cache"
+    if test -z "$def_domain"; set def_domain "$TGT_HOSTS[1]"; set src_domain "TGT_HOSTS"; end
+    if test -z "$def_domain"; set def_domain "$TGT_DC_DOMAIN"; set src_domain "TGT_DC_DOMAIN"; end
 
-            set -l def_domain "$__KRONOS_CACHE_PSEXEC_DOMAIN"
-            set -l src_domain "Cache"
-            if test -z "$def_domain"
-                set def_domain "$TGT_DC_DOMAIN"; set src_domain "TGT_DC_DOMAIN"
-            end
-            if test -n "$domain"; set def_domain "$domain"; set src_domain "CLI Arg"; end
-            set domain (__kronos_ask "Domain Name" "$def_domain" "$src_domain"); or return 1
-            set -U __KRONOS_CACHE_PSEXEC_DOMAIN "$domain"
+    # User priority
+    set -l def_user "$__KRONOS_CACHE_PSEXEC_AUTH_USER"
+    set -l src_user "Cache"
+    if test -z "$def_user"; set def_user "$TGT_USERNAME"; set src_user "TGT_USERNAME"; end
+    if test -z "$def_user"; set def_user "$TGT_CRED_USERNAME"; set src_user "TGT_CRED_USERNAME"; end
 
-            set -l def_auth_user "$__KRONOS_CACHE_PSEXEC_AUTH_USER"
-            set -l src_user "Cache"
-            if test -z "$def_auth_user"
-                set def_auth_user "$TGT_USERNAME"; set src_user "TGT_USERNAME"
-                if test -z "$def_auth_user"; set def_auth_user "$TGT_CRED_USERNAME"; set src_user "TGT_CRED_USERNAME"; end
-            end
-            if test -n "$auth_user"; set def_auth_user "$auth_user"; set src_user "CLI Arg"; end
-            set auth_user (__kronos_ask "Auth Username" "$def_auth_user" "$src_user"); or return 1
-            set -U __KRONOS_CACHE_PSEXEC_AUTH_USER "$auth_user"
+    if not set -q _flag_quiet; and begin test "$wizard" -eq 1 -o -z "$target"; or set -q _flag_wizard; end
+        set_color cyan; echo "[*] Starting PsExec wizard..."; set_color normal
 
-            if not set -q _flag_kerberos
-                set -l use_krb (__kronos_ask_confirm "Use Kerberos authentication?" n); or return 1
-                if test "$use_krb" = "yes"
-                    set _flag_kerberos 1
-                end
-            end
+        if test -n "$target"; set def_target "$target"; set src_target "CLI Arg"; end
+        set target (__kronos_ask "Target IP or FQDN" "$def_target" "$src_target"); or return 1
+        set -U __KRONOS_CACHE_PSEXEC_TARGET "$target"
 
-            if not set -q _flag_kerberos
-                set -l def_auth_val "$auth_pass"
-                if test -n "$auth_hash"; set def_auth_val "$auth_hash"; end
-                set -l auth_input (__kronos_ask "Auth Password or Hash" "$def_auth_val"); or return 1
-                set -U __KRONOS_CACHE_PSEXEC_AUTH_VAL "$auth_input"
-                if string match -rq '^[a-fA-F0-9]{32}:[a-fA-F0-9]{32}$|^[a-fA-F0-9]{32}$' -- "$auth_input"
-                    set auth_hash "$auth_input"; set auth_pass ""
-                else
-                    set auth_pass "$auth_input"; set auth_hash ""
-                end
-            end
+        if test -n "$domain"; set def_domain "$domain"; set src_domain "CLI Arg"; end
+        set domain (__kronos_ask "Domain Name" "$def_domain" "$src_domain"); or return 1
+        set -U __KRONOS_CACHE_PSEXEC_DOMAIN "$domain"
 
-            # Safety Confirmation
-            echo ""
-            set_color yellow; echo "WARNING: PsExec is a VERY LOUD technique."; set_color normal
-            echo "It will create a service and upload a binary to the target filesystem."
-            echo ""
-            echo "Configuration:"
-            echo "  Target: $target"
-            echo "  Domain: $domain"
-            echo "  User:   $auth_user"
-            echo "  Auth:   "(set -q _flag_kerberos; and echo "Kerberos"; or echo "Password/Hash")
-            echo ""
-            if test (__kronos_ask_confirm "Proceed with PsExec on $target?" n) != "yes"
-                echo "Aborted."
-                return 1
+        if test -n "$auth_user"; set def_user "$auth_user"; set src_user "CLI Arg"; end
+        set auth_user (__kronos_ask "Auth Username" "$def_user" "$src_user"); or return 1
+        set -U __KRONOS_CACHE_PSEXEC_AUTH_USER "$auth_user"
+
+        if not set -q _flag_kerberos
+            set -l use_krb (__kronos_ask_confirm "Use Kerberos authentication?" n); or return 1
+            if test "$use_krb" = "yes"
+                set _flag_kerberos 1
             end
         end
+
+        if not set -q _flag_kerberos
+            set -l def_auth_val "$__KRONOS_CACHE_PSEXEC_AUTH_VAL"
+            set -l src_auth_val "Cache"
+            if test -z "$def_auth_val"; set def_auth_val "$TGT_PASSWORD"; set src_auth_val "TGT_PASSWORD"; end
+            if test -z "$def_auth_val"; set def_auth_val "$TGT_CRED_PASSWORD"; set src_auth_val "TGT_CRED_PASSWORD"; end
+            if test -n "$auth_pass"; set def_auth_val "$auth_pass"; set src_auth_val "CLI Pass"; end
+            if test -n "$auth_hash"; set def_auth_val "$auth_hash"; set src_auth_val "CLI Hash"; end
+
+            set -l auth_input (__kronos_ask "Auth Password or Hash" "$def_auth_val" "$src_auth_val"); or return 1
+            set -U __KRONOS_CACHE_PSEXEC_AUTH_VAL "$auth_input"
+            if string match -rq '^[a-fA-F0-9]{32}:[a-fA-F0-9]{32}$|^[a-fA-F0-9]{32}$' -- "$auth_input"
+                set auth_hash "$auth_input"; set auth_pass ""
+            else
+                set auth_pass "$auth_input"; set auth_hash ""
+            end
+        end
+
+        # Safety Confirmation
+        echo ""
+        set_color yellow; echo "WARNING: PsExec is a VERY LOUD technique."; set_color normal
+        echo "It will create a service and upload a binary to the target filesystem."
+        echo ""
+        echo "Configuration:"
+        echo "  Target: $target"
+        echo "  Domain: $domain"
+        echo "  User:   $auth_user"
+        echo "  Auth:   "(set -q _flag_kerberos; and echo "Kerberos"; or echo "Password/Hash")
+        echo ""
+        if test (__kronos_ask_confirm "Proceed with PsExec on $target?" n) != "yes"
+            echo "Aborted."
+            return 1
+        end
     else
-        # Quiet mode fallbacks
-        if test -z "$target"; set target "$__KRONOS_CACHE_PSEXEC_TARGET"; end
-        if test -z "$target"; set target $TGT_HOSTS[1]; end
-        if test -z "$target"; set target $TGT_DC_IP; end
-        if test -z "$target"; set target $TGT_DC; end
-        if test -z "$target"; set target $TGT; end
-
-        if test -z "$domain"; set domain "$__KRONOS_CACHE_PSEXEC_DOMAIN"; end
-        if test -z "$domain"; set domain "$TGT_DC_DOMAIN"; end
-
-        if test -z "$auth_user"; set auth_user "$__KRONOS_CACHE_PSEXEC_AUTH_USER"; end
-        if test -z "$auth_user"; set auth_user "$TGT_USERNAME"; end
-        if test -z "$auth_user"; set auth_user "$TGT_CRED_USERNAME"; end
+        # Quiet mode or non-wizard: fall back to defaults if empty
+        if test -z "$target"; set target "$def_target"; end
+        if test -z "$domain"; set domain "$def_domain"; end
+        if test -z "$auth_user"; set auth_user "$def_user"; end
+        
+        if not set -q _flag_kerberos; and test -z "$auth_pass"; and test -z "$auth_hash"
+            set -l auth_input "$__KRONOS_CACHE_PSEXEC_AUTH_VAL"
+            if test -z "$auth_input"; set auth_input "$TGT_PASSWORD"; end
+            if test -z "$auth_input"; set auth_input "$TGT_CRED_PASSWORD"; end
+            if string match -rq '^[a-fA-F0-9]{32}:[a-fA-F0-9]{32}$|^[a-fA-F0-9]{32}$' -- "$auth_input"
+                set auth_hash "$auth_input"
+            else
+                set auth_pass "$auth_input"
+            end
+        end
     end
 
-    if test -z "$target"; echo "error: target is required"; return 1; end
-    if test -z "$domain"; echo "error: domain is required"; return 1; end
-    if test -z "$auth_user"; echo "error: username is required"; return 1; end
+    if test -z "$target"; echo "error: target is required" >&2; return 1; end
+    if test -z "$domain"; echo "error: domain is required" >&2; return 1; end
+    if test -z "$auth_user"; echo "error: username is required" >&2; return 1; end
 
     set -l impacket_cmd ""
     if command -v psexec.py >/dev/null; set impacket_cmd psexec.py
     else if command -v impacket-psexec >/dev/null; set impacket_cmd impacket-psexec
-    else; echo "error: psexec not found. run 'kronos install'."; return 1; end
+    else; echo "error: psexec not found. run 'kronos install'." >&2; return 1; end
 
     set -l psexec_args -no-pass
 
@@ -140,7 +146,7 @@ function __kronos_psexec --description "Remote command execution via psexec.py"
         if test -n "$auth_hash"
             set -a psexec_args -hashes "$auth_hash" "$domain/$auth_user@$target"
         else
-            if test -z "$auth_pass"; echo "error: password or hash required"; return 1; end
+            if test -z "$auth_pass"; echo "error: password or hash required" >&2; return 1; end
             set -a psexec_args "$domain/$auth_user:$auth_pass@$target"
         end
     end
