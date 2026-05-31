@@ -5,7 +5,7 @@ function __kronos_dominfo --description "Query domain info, users, groups, and s
         set wizard 1
     end
 
-    argparse t/target= h/help q/quiet P/pass-policy U/users G/groups L/loggedon S/shares u/username= p/password= N/NULL k/kerberos X/edit-cmd w/wizard -- $argv
+    argparse t/target= h/help q/quiet P/pass-policy U/users G/groups L/loggedon S/shares u/username= p/password= H/hash= N/NULL k/kerberos X/edit-cmd w/wizard -- $argv
     or return 1
 
     if set -q _flag_help
@@ -24,6 +24,7 @@ function __kronos_dominfo --description "Query domain info, users, groups, and s
         echo "  -t, --target IP               Target DC IP or Hostname"
         echo "  -u, --username USER           Auth username"
         echo "  -p, --password PASS           Auth password"
+        echo "  -H, --hash HASH               Auth NTLM hash"
         echo "  -N, --NULL                    Force NULL session enumeration"
         echo "  -k, --kerberos                Use Kerberos authentication"
         echo "  -X, --edit-cmd                Inspect and edit the command before execution"
@@ -43,6 +44,7 @@ function __kronos_dominfo --description "Query domain info, users, groups, and s
 
     set -l auth_user $_flag_username
     set -l auth_pass $_flag_password
+    set -l auth_hash $_flag_hash
     
     # Flags or Positional Commands
     set -l pass_pol 0
@@ -103,8 +105,16 @@ function __kronos_dominfo --description "Query domain info, users, groups, and s
                     set def_auth_val "$TGT_PASSWORD"; set src_auth_val "TGT_PASSWORD"
                     if test -z "$def_auth_val"; set def_auth_val "$TGT_CRED_PASSWORD"; set src_auth_val "TGT_CRED_PASSWORD"; end
                 end
-                set auth_pass (__kronos_ask "Auth Password" "$def_auth_val" "$src_auth_val")
-                set -U __KRONOS_CACHE_DOMINFO_AUTH_PASS "$auth_pass"
+                if test -n "$auth_pass"; set def_auth_val "$auth_pass"; set src_auth_val "CLI Pass"; end
+                if test -n "$auth_hash"; set def_auth_val "$auth_hash"; set src_auth_val "CLI Hash"; end
+                set -l auth_input (__kronos_ask "Auth Password or Hash" "$def_auth_val" "$src_auth_val")
+                set -U __KRONOS_CACHE_DOMINFO_AUTH_PASS "$auth_input"
+                
+                if string match -rq '^[a-fA-F0-9]{32}:[a-fA-F0-9]{32}$|^[a-fA-F0-9]{32}$' -- "$auth_input"
+                    set auth_hash "$auth_input"; set auth_pass ""
+                else
+                    set auth_pass "$auth_input"; set auth_hash ""
+                end
                 set -e _flag_NULL; set -e _flag_kerberos
             else if test "$mode" = "Kerberos"
                 set auth_user (__kronos_ask "Auth Username" "$auth_user"); or return 1
@@ -146,28 +156,33 @@ function __kronos_dominfo --description "Query domain info, users, groups, and s
     end
 
     # Quiet mode/Automatic fallbacks for Credentials
-    if test -z "$auth_user"
+    if test -z "$auth_user"; and not set -q _flag_NULL
         set auth_user "$TGT_USERNAME"
         if test -z "$auth_user"; set auth_user "$TGT_CRED_USERNAME"; end
         if test -z "$auth_user"; set auth_user "$__KRONOS_CACHE_DOMINFO_AUTH_USER"; end
     end
-    if test -z "$auth_pass"
+    if test -z "$auth_pass"; and test -z "$auth_hash"; and not set -q _flag_NULL
         set auth_pass "$TGT_PASSWORD"
         if test -z "$auth_pass"; set auth_pass "$TGT_CRED_PASSWORD"; end
         if test -z "$auth_pass"; set auth_pass "$__KRONOS_CACHE_DOMINFO_AUTH_PASS"; end
     end
 
+    set -l domain $TGT_DC_DOMAIN
+    if test -z "$domain"; set domain $TGT_HOSTS[1]; end
+
     set -l has_creds 0
-    if test -n "$auth_user"; and test -n "$auth_pass"; set has_creds 1; end
+    if test -n "$auth_user"; and begin test -n "$auth_pass"; or test -n "$auth_hash"; end; set has_creds 1; end
     if set -q _flag_kerberos; set has_creds 1; end
     if set -q _flag_NULL; set has_creds 0; end
 
     if test "$has_creds" -eq 1
         __kronos_check_dep nxc; or return 1
         set -l nxc_base "nxc smb $target"
-        if test -n "$TGT_DC_DOMAIN"; set nxc_base "$nxc_base -d $TGT_DC_DOMAIN"; end
+        if test -n "$domain"; set nxc_base "$nxc_base -d \"$domain\""; end
         if set -q _flag_kerberos
             set nxc_base "$nxc_base -k -u \"$auth_user\" -p \"\""
+        else if test -n "$auth_hash"
+            set nxc_base "$nxc_base -u \"$auth_user\" -H \"$auth_hash\""
         else
             set nxc_base "$nxc_base -u \"$auth_user\" -p \"$auth_pass\""
         end
@@ -205,10 +220,13 @@ function __kronos_dominfo --description "Query domain info, users, groups, and s
 
         if test "$list_groups" -eq 1
             echo ""; set_color cyan; echo "[*] Enumerating Domain Groups Now ...."; set_color normal
+            # Groups is better over LDAP
             set -l ldap_base "nxc ldap $target"
-            if test -n "$TGT_DC_DOMAIN"; set ldap_base "$ldap_base -d $TGT_DC_DOMAIN"; end
+            if test -n "$domain"; set ldap_base "$ldap_base -d \"$domain\""; end
             if set -q _flag_kerberos
                 set ldap_base "$ldap_base -k -u \"$auth_user\" -p \"\""
+            else if test -n "$auth_hash"
+                set ldap_base "$ldap_base -u \"$auth_user\" -H \"$auth_hash\""
             else
                 set ldap_base "$ldap_base -u \"$auth_user\" -p \"$auth_pass\""
             end
@@ -217,35 +235,41 @@ function __kronos_dominfo --description "Query domain info, users, groups, and s
             eval $cmd
         end
     else
-        __kronos_check_dep rpcclient; or return 1
+        # Force using NXC with Guest for NULL session simulation if requested
+        __kronos_check_dep nxc; or return 1
         echo ""
-        set_color -o yellow; echo ">>> [ SECTION: RPC NULL SESSION ENUMERATION ] <<<"; set_color normal
+        set_color -o yellow; echo ">>> [ SECTION: GUEST/NULL ENUMERATION ] <<<"; set_color normal
+        
+        set -l nxc_guest "nxc smb $target -u 'Guest' -p ''"
+        if test -n "$domain"; set nxc_guest "$nxc_guest -d \"$domain\""; end
 
-        if test "$pass_pol" -eq 1
-            echo ""; set_color cyan; echo "[*] Enumerating Password Policy Now ...."; set_color normal
-            set -l cmd "rpcclient -U \"\" -N \"$target\" -c \"querydominfo; getdompwinfo\""
+        if test "$list_shares" -eq 1
+            echo ""; set_color cyan; echo "[*] Enumerating Shares Now ...."; set_color normal
+            set -l cmd "$nxc_guest --shares"
             if set -q _flag_edit_cmd; set cmd (__kronos_edit_cmd "$cmd"); or return 1; end
             eval $cmd
         end
 
         if test "$list_users" -eq 1
             echo ""; set_color cyan; echo "[*] Enumerating Domain Users Now ...."; set_color normal
-            set -l cmd "rpcclient -U \"\" -N \"$target\" -c \"enumdomusers\""
+            set -l cmd "$nxc_guest --users"
             if set -q _flag_edit_cmd; set cmd (__kronos_edit_cmd "$cmd"); or return 1; end
             eval $cmd
         end
 
         if test "$list_groups" -eq 1
             echo ""; set_color cyan; echo "[*] Enumerating Domain Groups Now ...."; set_color normal
-            set -l cmd "rpcclient -U \"\" -N \"$target\" -c \"enumdomgroups\""
+            set -l ldap_guest "nxc ldap $target -u 'Guest' -p ''"
+            if test -n "$domain"; set ldap_guest "$ldap_guest -d \"$domain\""; end
+            set -l cmd "$ldap_guest --groups"
             if set -q _flag_edit_cmd; set cmd (__kronos_edit_cmd "$cmd"); or return 1; end
             eval $cmd
         end
-
-        if test "$list_shares" -eq 1
-            echo ""; set_color cyan; echo "[*] Enumerating Shares Now ...."; set_color normal
-            set -l cmd "rpcclient -U \"\" -N \"$target\" -c \"netshareenum\""
-            if set -q _flag_edit_cmd; set cmd (__kronos_edit_cmd "$cmd"); or return 1; end
+        
+        # Fallback to rpcclient for password policy if needed (as Guest/NULL can sometimes fetch it)
+        if test "$pass_pol" -eq 1
+            echo ""; set_color cyan; echo "[*] Querying Password Policy via rpcclient (NULL)..."; set_color normal
+            set -l cmd "rpcclient -U \"\" -N \"$target\" -c \"querydominfo; getdompwinfo\""
             eval $cmd
         end
     end

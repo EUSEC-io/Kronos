@@ -20,7 +20,7 @@ function __kronos_userenum --description "Enumerate AD users (Wordlist, NULL Ses
         echo "  -p, --password PASS  Auth password"
         echo "  -H, --hash HASH      Auth NTLM hash"
         echo "  -k, --kerberos       Use Kerberos authentication"
-        echo "  -N, --null           Use NULL session (nxc)"
+        echo "  -N, --null           Use NULL session (nxc -u 'Guest' -p '')"
         echo "  -X, --edit-cmd       Inspect and edit the command before execution"
         echo "  -q, --quiet          Skip prompts and use fallbacks"
         echo "  -h, --help           Show this help message"
@@ -80,6 +80,7 @@ function __kronos_userenum --description "Enumerate AD users (Wordlist, NULL Ses
                         set def_user "$TGT_USERNAME"; set src_user "TGT_USERNAME"
                         if test -z "$def_user"; set def_user "$TGT_CRED_USERNAME"; set src_user "TGT_CRED_USERNAME"; end
                     end
+                    if test -n "$auth_user"; set def_user "$auth_user"; set src_user "CLI Arg"; end
                     set auth_user (__kronos_ask "Auth Username" "$def_user" "$src_user"); or return 1
                     set -U __KRONOS_CACHE_USERENUM_AUTH_USER "$auth_user"
 
@@ -87,7 +88,10 @@ function __kronos_userenum --description "Enumerate AD users (Wordlist, NULL Ses
                     set -l src_auth_val "Cache"
                     if test -z "$def_auth_val"
                         set def_auth_val "$TGT_PASSWORD"; set src_auth_val "TGT_PASSWORD"
+                        if test -z "$def_auth_val"; set def_auth_val "$TGT_CRED_PASSWORD"; set src_auth_val "TGT_CRED_PASSWORD"; end
                     end
+                    if test -n "$auth_pass"; set def_auth_val "$auth_pass"; set src_auth_val "CLI Pass"; end
+                    if test -n "$auth_hash"; set def_auth_val "$auth_hash"; set src_auth_val "CLI Hash"; end
                     set -l auth_input (__kronos_ask "Auth Password or Hash" "$def_auth_val" "$src_auth_val"); or return 1
                     set -U __KRONOS_CACHE_USERENUM_AUTH_VAL "$auth_input"
                     
@@ -144,13 +148,14 @@ function __kronos_userenum --description "Enumerate AD users (Wordlist, NULL Ses
             rm -f .kerbrute_out.txt
         end
     else
-        # NULL Session or Credentials via NXC
+        # NULL Session (Guest) or Credentials via NXC
         __kronos_check_dep nxc; or return 1
         set -l nxc_cmd "nxc smb \"$target\""
         if test -n "$domain"; set nxc_cmd "$nxc_cmd -d \"$domain\""; end
         
         if test "$mode" = "NULL Session"
-            set nxc_cmd "$nxc_cmd -u '' -p ''"
+            # As requested: use Guest for NULL session simulation
+            set nxc_cmd "$nxc_cmd -u 'Guest' -p ''"
         else
             if set -q _flag_kerberos
                 set nxc_cmd "$nxc_cmd -k -u \"$auth_user\" -p ''"
