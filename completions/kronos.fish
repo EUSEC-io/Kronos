@@ -77,6 +77,7 @@ complete -c kronos -n "__fish_seen_subcommand_from $needs_auth" -s k -l kerberos
 
 # Subcommand-specific flags
 complete -c kronos -n "__fish_seen_subcommand_from userenum" -s w -l wordlist -r -d "Custom wordlist"
+complete -c kronos -n "__fish_seen_subcommand_from userenum" -s N -l null -d "Use NULL session"
 complete -c kronos -n "__fish_seen_subcommand_from dnsdump" -s r -l resolve -d "Resolve all records"
 complete -c kronos -n "__fish_seen_subcommand_from gpp" -s m -l gpp-password -d "Scan for GPP passwords"
 complete -c kronos -n "__fish_seen_subcommand_from gpp" -s a -l autologin -d "Scan for Autologon registries"
