@@ -5,7 +5,7 @@ function __kronos_userenum --description "Enumerate AD users (Wordlist, NULL Ses
         set wizard 1
     end
 
-    argparse t/target= h/help q/quiet w/wordlist= u/username= p/password= H/hash= k/kerberos N/null X/edit-cmd W/wizard -- $argv
+    argparse t/target= h/help q/quiet w/wordlist= u/username= p/password= H/hash= d/domain= k/kerberos N/null X/edit-cmd W/wizard -- $argv
     or return 1
 
     if set -q _flag_help
@@ -16,6 +16,7 @@ function __kronos_userenum --description "Enumerate AD users (Wordlist, NULL Ses
         echo "Options:"
         echo "  -t, --target IP      Target DC IP or Hostname"
         echo "  -w, --wordlist FILE  Path to custom wordlist (for Wordlist mode)"
+        echo "  -d, --domain NAME    Target domain name"
         echo "  -u, --username USER  Auth username (for Credentials mode)"
         echo "  -p, --password PASS  Auth password"
         echo "  -H, --hash HASH      Auth NTLM hash"
@@ -31,6 +32,7 @@ function __kronos_userenum --description "Enumerate AD users (Wordlist, NULL Ses
     if test -z "$target"; and test (count $argv) -gt 0
         set target $argv[1]
     end
+    set -l domain $_flag_domain
     set -l userlist $_flag_wordlist
     set -l auth_user $_flag_username
     set -l auth_pass $_flag_password
@@ -56,10 +58,23 @@ function __kronos_userenum --description "Enumerate AD users (Wordlist, NULL Ses
     if not set -q _flag_quiet
         if test "$wizard" -eq 1 -o -z "$target"; or set -q _flag_wizard
             set_color cyan; echo "[*] Starting UserEnum wizard..."; set_color normal
+            
+            # Target Prompt
             set target (__kronos_ask "Target DC IP/Hostname" "$def_target" "$src_target"); or return 1
             set -U __KRONOS_CACHE_USERENUM_TARGET "$target"
 
-            # 2. Mode Selection
+            # Domain Prompt
+            set -l def_domain "$__KRONOS_CACHE_USERENUM_DOMAIN"
+            set -l src_domain "Cache"
+            if test -z "$def_domain"
+                set def_domain "$TGT_HOSTS[1]"; set src_domain "TGT_HOSTS"
+                if test -z "$def_domain"; set def_domain "$TGT_DC_DOMAIN"; set src_domain "TGT_DC_DOMAIN"; end
+            end
+            if test -n "$domain"; set def_domain "$domain"; set src_domain "CLI Arg"; end
+            set domain (__kronos_ask "Domain Name" "$def_domain" "$src_domain"); or return 1
+            set -U __KRONOS_CACHE_USERENUM_DOMAIN "$domain"
+
+            # Mode Selection
             if test -z "$mode"
                 set mode (__kronos_ask_choice "Enumeration Mode" "Wordlist" "Wordlist" "NULL Session" "Credentials"); or return 1
             end
@@ -106,6 +121,11 @@ function __kronos_userenum --description "Enumerate AD users (Wordlist, NULL Ses
     else
         # Quiet fallbacks
         if test -z "$target"; set target "$def_target"; end
+        if test -z "$domain"
+            set domain "$__KRONOS_CACHE_USERENUM_DOMAIN"
+            if test -z "$domain"; set domain $TGT_HOSTS[1]; end
+            if test -z "$domain"; set domain $TGT_DC_DOMAIN; end
+        end
         if test -z "$mode"; set mode "Wordlist"; end
         if test "$mode" = "Wordlist" -a -z "$userlist"
             set userlist "$__KRONOS_CACHE_USERENUM_USERLIST"
@@ -114,13 +134,7 @@ function __kronos_userenum --description "Enumerate AD users (Wordlist, NULL Ses
     end
 
     if test -z "$target"; echo "error: target is required"; return 1; end
-
-    set -l domain $TGT_DC_DOMAIN
-    if test -z "$domain"; set domain $TGT_HOSTS[1]; end
-    if test -z "$domain"
-        echo "error: \$TGT_DC_DOMAIN or \$TGT_HOSTS is not set" >&2
-        return 1
-    end
+    if test -z "$domain"; echo "error: domain is required"; return 1; end
 
     if test "$mode" = "Wordlist"
         if not test -f "$userlist"
@@ -154,7 +168,6 @@ function __kronos_userenum --description "Enumerate AD users (Wordlist, NULL Ses
         if test -n "$domain"; set nxc_cmd "$nxc_cmd -d \"$domain\""; end
         
         if test "$mode" = "NULL Session"
-            # As requested: use Guest for NULL session simulation
             set nxc_cmd "$nxc_cmd -u 'Guest' -p ''"
         else
             if set -q _flag_kerberos
@@ -169,7 +182,7 @@ function __kronos_userenum --description "Enumerate AD users (Wordlist, NULL Ses
         set nxc_cmd "$nxc_cmd --users"
         if set -q _flag_edit_cmd; set nxc_cmd (__kronos_edit_cmd "$nxc_cmd"); or return 1; end
 
-        echo "[*] Running NetExec user enumeration ($mode) against $target..."
+        echo "[*] Running NetExec user enumeration ($mode) against $target ($domain)..."
         eval $nxc_cmd
     end
 end
