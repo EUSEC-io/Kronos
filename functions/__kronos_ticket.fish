@@ -200,8 +200,9 @@ function __kronos_ticket --description "Create advanced AD tickets using tickete
 
     else if test "$subaction" = "cross-forest"
         __kronos_check_dep nxc; or return 1
+        # FIX: Using set -a to append instead of overwriting the protocol and target
         set -l nxc_args ldap "$target" -u "$auth_user"
-        if test -n "$domain"; set nxc_args -d "$domain"; end
+        if test -n "$domain"; set -a nxc_args -d "$domain"; end
         if test -n "$auth_hash"
             set -a nxc_args -H "$auth_hash"
         else
