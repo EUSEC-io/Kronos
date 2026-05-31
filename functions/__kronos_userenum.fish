@@ -5,7 +5,8 @@ function __kronos_userenum --description "Run kerbrute userenum"
         set wizard 1
     end
 
-    argparse t/target= h/help q/quiet w/wordlist= X/edit-cmd w/wizard -- $argv
+    # Use W for wizard to avoid conflict with w for wordlist
+    argparse t/target= h/help q/quiet w/wordlist= X/edit-cmd W/wizard -- $argv
     or return 1
 
     if set -q _flag_help
@@ -23,11 +24,13 @@ function __kronos_userenum --description "Run kerbrute userenum"
     end
 
     set -l target $_flag_target
-    if test -z "$target"; set target $argv[1]; end
+    if test -z "$target"; and test (count $argv) -gt 0
+        set target $argv[1]
+    end
     set -l userlist $_flag_wordlist
 
     if not set -q _flag_quiet
-        if test (count $argv) -eq 0 -o -z "$target"; or set -q _flag_wizard
+        if test "$wizard" -eq 1 -o -z "$target"; or set -q _flag_wizard
             set_color cyan; echo "[*] Starting UserEnum wizard..."; set_color normal
 
             set -l def_target "$__KRONOS_CACHE_USERENUM_TARGET"

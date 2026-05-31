@@ -5,11 +5,11 @@ function __kronos_rdp --description "Connect to target using xfreerdp3 (RDP)"
         set wizard 1
     end
 
-    argparse t/target= h/help X/edit-cmd u/username= p/password= H/hash= d/domain= q/quiet w/wizard -- $argv
+    argparse t/target= h/help X/edit-cmd u/username= p/password= H/hash= d/domain= q/quiet w/wizard f/fullscreen S/share -- $argv
     or return 1
 
     if set -q _flag_help
-        echo "Usage: kronos connect rdp [OPTIONS]"
+        echo "Usage: kronos connect rdp [TARGET] [OPTIONS]"
         echo ""
         echo "Connect to a target via RDP using xfreerdp3."
         echo ""
@@ -19,6 +19,8 @@ function __kronos_rdp --description "Connect to target using xfreerdp3 (RDP)"
         echo "  -p, --password PASS Provide password"
         echo "  -H, --hash HASH     Provide NTLM hash for PTH"
         echo "  -d, --domain DOMAIN Provide domain"
+        echo "  -f, --fullscreen    Enable fullscreen mode"
+        echo "  -S, --share         Share current directory"
         echo "  -X, --edit-cmd      Edit command before execution"
         echo "  -q, --quiet         Skip prompts and use cached/default values"
         echo "  -h, --help          Show this help message"
@@ -26,14 +28,18 @@ function __kronos_rdp --description "Connect to target using xfreerdp3 (RDP)"
     end
 
     set -l target $_flag_target
-    if test -z "$target"; set target $argv[1]; end
+    if test -z "$target"; and test (count $argv) -gt 0; set target $argv[1]; end
     set -l user $_flag_username
     set -l pass $_flag_password
     set -l hash $_flag_hash
     set -l domain $_flag_domain
+    set -l fullscreen 0
+    if set -q _flag_fullscreen; set fullscreen 1; end
+    set -l share_cwd 0
+    if set -q _flag_share; set share_cwd 1; end
 
     if not set -q _flag_quiet
-        if set -q _flag_wizard; or test -z "$target"
+        if test "$wizard" -eq 1 -o -z "$target"; or set -q _flag_wizard
             set_color cyan; echo "[*] Starting RDP connection wizard..."; set_color normal
             
             set -l def_target "$__KRONOS_CACHE_RDP_TARGET"
@@ -68,14 +74,23 @@ function __kronos_rdp --description "Connect to target using xfreerdp3 (RDP)"
             set -U __KRONOS_CACHE_RDP_DOMAIN "$domain"
 
             set -l def_auth_val "$__KRONOS_CACHE_RDP_AUTH_VAL"
-            if test -z "$def_auth_val"; set def_auth_val "$TGT_CRED_PASSWORD"; end
-            set -l auth_input (__kronos_ask "Password or Hash" "$def_auth_val"); or return 1
+            set -l src_auth_val "Cache"
+            if test -z "$def_auth_val"
+                set def_auth_val "$TGT_CRED_PASSWORD"; set src_auth_val "TGT_CRED_PASSWORD"
+            end
+            set -l auth_input (__kronos_ask "Password or Hash" "$def_auth_val" "$src_auth_val"); or return 1
             set -U __KRONOS_CACHE_RDP_AUTH_VAL "$auth_input"
             if string match -rq '^[a-fA-F0-9]{32}:[a-fA-F0-9]{32}$|^[a-fA-F0-9]{32}$' -- "$auth_input"
                 set hash "$auth_input"; set pass ""
             else
                 set pass "$auth_input"; set hash ""
             end
+
+            if test (__kronos_ask_confirm "Enable Fullscreen mode?" (test "$fullscreen" -eq 1; and echo "y"; or echo "n")) = "yes"
+                set fullscreen 1; else; set fullscreen 0; end
+            
+            if test (__kronos_ask_confirm "Share current directory ($PWD)?" (test "$share_cwd" -eq 1; and echo "y"; or echo "n")) = "yes"
+                set share_cwd 1; else; set share_cwd 0; end
         end
     else
         # Fallbacks
@@ -93,7 +108,11 @@ function __kronos_rdp --description "Connect to target using xfreerdp3 (RDP)"
         else; echo "error: xfreerdp3 not found."; return 1; end
     end
 
-    set -l cmd_list $rdp_bin /v:"$target" /cert:ignore /size:1920x1080 /f /drive:share,"$PWD"
+    set -l cmd_list $rdp_bin /v:"$target" /cert:ignore /size:1920x1080 /clipboard
+    
+    if test "$fullscreen" -eq 1; set -a cmd_list /f; end
+    if test "$share_cwd" -eq 1; set -a cmd_list /drive:share,"$PWD"; end
+
     if test -n "$user"; set -a cmd_list /u:"$user"; end
     if test -n "$domain"; set -a cmd_list /d:"$domain"; end
     if test -n "$hash"
