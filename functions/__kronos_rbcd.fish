@@ -51,6 +51,16 @@ function __kronos_rbcd --description "RBCD attack (msDS-AllowedToDelegateTo)"
             set target (__kronos_ask "Target DC IP/Hostname" "$def_target" "$src_target"); or return 1
             set -U __KRONOS_CACHE_RBCD_TARGET "$target"
 
+            set -l def_domain "$__KRONOS_CACHE_RBCD_DOMAIN"
+            set -l src_domain "Cache"
+            if test -z "$def_domain"
+                set def_domain "$TGT_HOSTS[1]"; set src_domain "TGT_HOSTS"
+                if test -z "$def_domain"; set def_domain "$TGT_DC_DOMAIN"; set src_domain "TGT_DC_DOMAIN"; end
+            end
+            if test -n "$domain"; set def_domain "$domain"; set src_domain "CLI Arg"; end
+            set domain (__kronos_ask "Domain Name" "$def_domain" "$src_domain"); or return 1
+            set -U __KRONOS_CACHE_RBCD_DOMAIN "$domain"
+
             set target_comp (__kronos_ask "Target Computer (e.g. web01\$)" "$target_comp"); or return 1
             set -U __KRONOS_CACHE_RBCD_TARGET_COMP "$target_comp"
 

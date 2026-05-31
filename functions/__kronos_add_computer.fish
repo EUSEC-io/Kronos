@@ -51,6 +51,16 @@ function __kronos_add_computer --description "Create a new AD computer account u
             set target (__kronos_ask "Target DC IP/Hostname" "$def_target" "$src_target"); or return 1
             set -U __KRONOS_CACHE_ADDCOMP_TARGET "$target"
 
+            set -l def_domain "$__KRONOS_CACHE_ADDCOMP_DOMAIN"
+            set -l src_domain "Cache"
+            if test -z "$def_domain"
+                set def_domain "$TGT_HOSTS[1]"; set src_domain "TGT_HOSTS"
+                if test -z "$def_domain"; set def_domain "$TGT_DC_DOMAIN"; set src_domain "TGT_DC_DOMAIN"; end
+            end
+            if test -n "$domain"; set def_domain "$domain"; set src_domain "CLI Arg"; end
+            set domain (__kronos_ask "Domain Name" "$def_domain" "$src_domain"); or return 1
+            set -U __KRONOS_CACHE_ADDCOMP_DOMAIN "$domain"
+
             set computer (__kronos_ask "Computer Name" "$computer"); or return 1
             set -U __KRONOS_CACHE_ADDCOMP_NAME "$computer"
 

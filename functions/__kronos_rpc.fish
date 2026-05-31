@@ -50,6 +50,16 @@ function __kronos_rpc --description "Connect to target using rpcclient (RPC)"
             set target (__kronos_ask "Target DC IP/Hostname" "$def_target" "$src_target"); or return 1
             set -U __KRONOS_CACHE_RPC_TARGET "$target"
 
+            set -l def_domain "$__KRONOS_CACHE_RPC_DOMAIN"
+            set -l src_domain "Cache"
+            if test -z "$def_domain"
+                set def_domain "$TGT_HOSTS[1]"; set src_domain "TGT_HOSTS"
+                if test -z "$def_domain"; set def_domain "$TGT_DC_DOMAIN"; set src_domain "TGT_DC_DOMAIN"; end
+            end
+            if test -n "$domain"; set def_domain "$domain"; set src_domain "CLI Arg"; end
+            set domain (__kronos_ask "Domain Name" "$def_domain" "$src_domain"); or return 1
+            set -U __KRONOS_CACHE_RPC_DOMAIN "$domain"
+
             if not set -q _flag_null; and not set -q _flag_kerberos
                 set -l def_user "$__KRONOS_CACHE_RPC_AUTH_USER"
                 set -l src_user "Cache"

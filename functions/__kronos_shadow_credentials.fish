@@ -49,6 +49,16 @@ function __kronos_shadow_credentials --description "Shadow Credentials attack (K
             set target (__kronos_ask "Target DC IP/Hostname" "$def_target" "$src_target"); or return 1
             set -U __KRONOS_CACHE_SHADOW_TARGET "$target"
 
+            set -l def_domain "$__KRONOS_CACHE_SHADOW_DOMAIN"
+            set -l src_domain "Cache"
+            if test -z "$def_domain"
+                set def_domain "$TGT_HOSTS[1]"; set src_domain "TGT_HOSTS"
+                if test -z "$def_domain"; set def_domain "$TGT_DC_DOMAIN"; set src_domain "TGT_DC_DOMAIN"; end
+            end
+            if test -n "$domain"; set def_domain "$domain"; set src_domain "CLI Arg"; end
+            set domain (__kronos_ask "Domain Name" "$def_domain" "$src_domain"); or return 1
+            set -U __KRONOS_CACHE_SHADOW_DOMAIN "$domain"
+
             set target_obj (__kronos_ask "Target Object (e.g. web01\$)" "$target_obj"); or return 1
             set -U __KRONOS_CACHE_SHADOW_OBJ "$target_obj"
 

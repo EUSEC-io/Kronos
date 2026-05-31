@@ -74,6 +74,16 @@ function __kronos_dominfo --description "Query domain info, users, groups, and s
             set_color cyan; echo "[*] Starting DomInfo wizard..."; set_color normal
             set target (__kronos_ask "Target DC IP/Hostname" "$def_target" "$src_target"); or return 1
             set -U __KRONOS_CACHE_DOMINFO_TARGET "$target"
+
+            set -l def_domain "$__KRONOS_CACHE_DOMINFO_DOMAIN"
+            set -l src_domain "Cache"
+            if test -z "$def_domain"
+                set def_domain "$TGT_HOSTS[1]"; set src_domain "TGT_HOSTS"
+                if test -z "$def_domain"; set def_domain "$TGT_DC_DOMAIN"; set src_domain "TGT_DC_DOMAIN"; end
+            end
+            if test -n "$domain"; set def_domain "$domain"; set src_domain "CLI Arg"; end
+            set domain (__kronos_ask "Domain Name" "$def_domain" "$src_domain"); or return 1
+            set -U __KRONOS_CACHE_DOMINFO_DOMAIN "$domain"
         else
             set target "$def_target"
         end

@@ -44,6 +44,16 @@ function __kronos_spray --description "Password spray using nxc smb"
             set target (__kronos_ask "Target DC IP/Hostname" "$def_target" "$src_target"); or return 1
             set -U __KRONOS_CACHE_SPRAY_TARGET "$target"
 
+            set -l def_domain "$__KRONOS_CACHE_SPRAY_DOMAIN"
+            set -l src_domain "Cache"
+            if test -z "$def_domain"
+                set def_domain "$TGT_HOSTS[1]"; set src_domain "TGT_HOSTS"
+                if test -z "$def_domain"; set def_domain "$TGT_DC_DOMAIN"; set src_domain "TGT_DC_DOMAIN"; end
+            end
+            if test -n "$domain"; set def_domain "$domain"; set src_domain "CLI Arg"; end
+            set domain (__kronos_ask "Domain Name" "$def_domain" "$src_domain"); or return 1
+            set -U __KRONOS_CACHE_SPRAY_DOMAIN "$domain"
+
             set -l def_userlist "$__KRONOS_CACHE_SPRAY_USERLIST"
             set -l src_userlist "Cache"
             if test -z "$def_userlist"; set def_userlist "valid_users.txt"; set src_userlist "Default"; end

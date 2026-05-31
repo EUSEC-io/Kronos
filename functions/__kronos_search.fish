@@ -49,6 +49,16 @@ function __kronos_search --description "Search and enumerate AD objects using bl
             set target (__kronos_ask "Target DC IP/Hostname" "$def_target" "$src_target"); or return 1
             set -U __KRONOS_CACHE_SEARCH_TARGET "$target"
 
+            set -l def_domain "$__KRONOS_CACHE_SEARCH_DOMAIN"
+            set -l src_domain "Cache"
+            if test -z "$def_domain"
+                set def_domain "$TGT_HOSTS[1]"; set src_domain "TGT_HOSTS"
+                if test -z "$def_domain"; set def_domain "$TGT_DC_DOMAIN"; set src_domain "TGT_DC_DOMAIN"; end
+            end
+            if test -n "$domain"; set def_domain "$domain"; set src_domain "CLI Arg"; end
+            set domain (__kronos_ask "Domain Name" "$def_domain" "$src_domain"); or return 1
+            set -U __KRONOS_CACHE_SEARCH_DOMAIN "$domain"
+
             set -l def_query "$__KRONOS_CACHE_SEARCH_QUERY"
             if test -z "$def_query"; set def_query "(&(objectClass=user)(sAMAccountName=Administrator))"; end
             set query (__kronos_ask "LDAP Query" "$def_query"); or return 1
