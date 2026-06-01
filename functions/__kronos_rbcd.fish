@@ -114,8 +114,10 @@ function __kronos_rbcd --description "RBCD attack (msDS-AllowedToDelegateTo)"
 
     if test -z "$target"; echo "error: target is required"; return 1; end
 
-    set -l domain $TGT_DC_DOMAIN
-    if test -z "$domain"; set domain $TGT_HOSTS[1]; end
+    if test -z "$domain"
+        set domain $TGT_DC_DOMAIN
+        if test -z "$domain"; set domain $TGT_HOSTS[1]; end
+    end
     if test -z "$domain"
         echo "error: \$TGT_DC_DOMAIN or \$TGT_HOSTS is not set" >&2
         return 1

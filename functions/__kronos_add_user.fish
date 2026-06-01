@@ -110,7 +110,7 @@ function __kronos_add_user --description "Create a new AD user using bloodyAD"
     if test -z "$new_user"; echo "error: new user is required"; return 1; end
     if test -z "$new_pass"; echo "error: new password is required"; return 1; end
 
-    set -l domain $TGT_DC_DOMAIN
+    if test -z "$domain"; set domain $TGT_DC_DOMAIN; end
     if test -z "$domain"
         echo "error: \$TGT_DC_DOMAIN is not set" >&2
         return 1

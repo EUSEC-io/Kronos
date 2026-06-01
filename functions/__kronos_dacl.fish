@@ -80,7 +80,7 @@ function __kronos_dacl --description "Manipulate AD object DACLs using bloodyAD"
     if test -z "$target_obj"; echo "error: --target-object is required" >&2; return 1; end
     if test -z "$member"; echo "error: --member is required" >&2; return 1; end
 
-    set -l domain $TGT_DC_DOMAIN
+    if test -z "$domain"; set domain $TGT_DC_DOMAIN; end
     if test -z "$domain"
         echo "error: \$TGT_DC_DOMAIN is not set" >&2
         return 1

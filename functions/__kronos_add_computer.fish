@@ -122,7 +122,7 @@ function __kronos_add_computer --description "Create a new AD computer account u
     if test -z "$target"; echo "error: target is required"; return 1; end
     if test -z "$computer"; echo "error: computer name is required"; return 1; end
 
-    set -l domain $TGT_DC_DOMAIN
+    if test -z "$domain"; set domain $TGT_DC_DOMAIN; end
     if test -z "$domain"
         echo "error: \$TGT_DC_DOMAIN is not set" >&2
         return 1

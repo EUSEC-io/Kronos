@@ -114,7 +114,7 @@ function __kronos_add_member --description "Add a user to an AD group using bloo
     if test -z "$group"; echo "error: --group is required" >&2; return 1; end
     if test -z "$member"; echo "error: --member is required" >&2; return 1; end
 
-    set -l domain $TGT_DC_DOMAIN
+    if test -z "$domain"; set domain $TGT_DC_DOMAIN; end
     if test -z "$domain"
         echo "error: \$TGT_DC_DOMAIN is not set" >&2
         return 1

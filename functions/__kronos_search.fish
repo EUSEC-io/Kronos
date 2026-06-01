@@ -94,8 +94,10 @@ function __kronos_search --description "Search and enumerate AD objects using bl
 
     if test -z "$target"; echo "error: target DC is required"; return 1; end
 
-    set -l domain $TGT_DC_DOMAIN
-    if test -z "$domain"; set domain $TGT_HOSTS[1]; end
+    if test -z "$domain"
+        set domain $TGT_DC_DOMAIN
+        if test -z "$domain"; set domain $TGT_HOSTS[1]; end
+    end
     if test -z "$domain"
         echo "error: \$TGT_DC_DOMAIN or \$TGT_HOSTS is not set" >&2
         return 1

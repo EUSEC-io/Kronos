@@ -110,7 +110,7 @@ function __kronos_forcechange --description "Force change a user's password usin
     if test -z "$target_user"; echo "error: target user is required"; return 1; end
     if test -z "$new_pass"; echo "error: new password is required"; return 1; end
 
-    set -l domain $TGT_DC_DOMAIN
+    if test -z "$domain"; set domain $TGT_DC_DOMAIN; end
     if test -z "$domain"
         echo "error: \$TGT_DC_DOMAIN is not set" >&2
         return 1
