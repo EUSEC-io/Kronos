@@ -5,7 +5,7 @@ function __kronos_userenum --description "Enumerate AD users (Wordlist, NULL Ses
         set wizard 1
     end
 
-    argparse t/target= h/help q/quiet w/wordlist= u/username= p/password= H/hash= d/domain= k/kerberos N/null X/edit-cmd W/wizard -- $argv
+    argparse t/target= h/help q/quiet w/wordlist= u/username= p/password= H/hash= d/domain= k/kerberos N/null E/export X/edit-cmd W/wizard -- $argv
     or return 1
 
     if set -q _flag_help
@@ -22,6 +22,7 @@ function __kronos_userenum --description "Enumerate AD users (Wordlist, NULL Ses
         echo "  -H, --hash HASH      Auth NTLM hash"
         echo "  -k, --kerberos       Use Kerberos authentication"
         echo "  -N, --null           Use NULL session (nxc -u 'Guest' -p '')"
+        echo "  -E, --export         Export users via LDAP (nxc --users-export)"
         echo "  -X, --edit-cmd       Inspect and edit the command before execution"
         echo "  -q, --quiet          Skip prompts and use fallbacks"
         echo "  -h, --help           Show this help message"
@@ -37,6 +38,8 @@ function __kronos_userenum --description "Enumerate AD users (Wordlist, NULL Ses
     set -l auth_user $_flag_username
     set -l auth_pass $_flag_password
     set -l auth_hash $_flag_hash
+    set -l export_ldap 0
+    if set -q _flag_export; set export_ldap 1; end
     set -l mode ""
 
     # Determine mode from flags
@@ -116,6 +119,12 @@ function __kronos_userenum --description "Enumerate AD users (Wordlist, NULL Ses
                         set auth_pass "$auth_input"; set auth_hash ""
                     end
                 end
+
+                if test "$export_ldap" -eq 0
+                    if test (__kronos_ask_confirm "Export full user list via LDAP?" n) = "yes"
+                        set export_ldap 1
+                    end
+                end
             end
         end
     else
@@ -164,25 +173,51 @@ function __kronos_userenum --description "Enumerate AD users (Wordlist, NULL Ses
     else
         # NULL Session (Guest) or Credentials via NXC
         __kronos_check_dep nxc; or return 1
-        set -l nxc_cmd "nxc smb \"$target\""
-        if test -n "$domain"; set nxc_cmd "$nxc_cmd -d \"$domain\""; end
         
-        if test "$mode" = "NULL Session"
-            set nxc_cmd "$nxc_cmd -u 'Guest' -p ''"
-        else
-            if set -q _flag_kerberos
-                set nxc_cmd "$nxc_cmd -k -u \"$auth_user\" -p ''"
-            else if test -n "$auth_hash"
-                set nxc_cmd "$nxc_cmd -u \"$auth_user\" -H \"$auth_hash\""
+        if test "$export_ldap" -eq 1
+            # LDAP Mode requested
+            set -l nxc_cmd "nxc ldap \"$target\""
+            if test -n "$domain"; set nxc_cmd "$nxc_cmd -d \"$domain\""; end
+            
+            if test "$mode" = "NULL Session"
+                set nxc_cmd "$nxc_cmd -u 'Guest' -p ''"
             else
-                set nxc_cmd "$nxc_cmd -u \"$auth_user\" -p \"$auth_pass\""
+                if set -q _flag_kerberos
+                    set nxc_cmd "$nxc_cmd -k --use-kcache"
+                else if test -n "$auth_hash"
+                    set nxc_cmd "$nxc_cmd -u \"$auth_user\" -H \"$auth_hash\""
+                else
+                    set nxc_cmd "$nxc_cmd -u \"$auth_user\" -p \"$auth_pass\""
+                end
             end
-        end
-        
-        set nxc_cmd "$nxc_cmd --users"
-        if set -q _flag_edit_cmd; set nxc_cmd (__kronos_edit_cmd "$nxc_cmd"); or return 1; end
+            
+            set nxc_cmd "$nxc_cmd --users-export users.txt"
+            if set -q _flag_edit_cmd; set nxc_cmd (__kronos_edit_cmd "$nxc_cmd"); or return 1; end
 
-        echo "[*] Running NetExec user enumeration ($mode) against $target ($domain)..."
-        __kronos_exec "$nxc_cmd"
+            echo "[*] Running NetExec LDAP user export against $target..."
+            __kronos_exec "$nxc_cmd"
+        else
+            # SMB Mode
+            set -l nxc_cmd "nxc smb \"$target\""
+            if test -n "$domain"; set nxc_cmd "$nxc_cmd -d \"$domain\""; end
+            
+            if test "$mode" = "NULL Session"
+                set nxc_cmd "$nxc_cmd -u 'Guest' -p ''"
+            else
+                if set -q _flag_kerberos
+                    set nxc_cmd "$nxc_cmd -k -u \"$auth_user\" -p ''"
+                else if test -n "$auth_hash"
+                    set nxc_cmd "$nxc_cmd -u \"$auth_user\" -H \"$auth_hash\""
+                else
+                    set nxc_cmd "$nxc_cmd -u \"$auth_user\" -p \"$auth_pass\""
+                end
+            end
+            
+            set nxc_cmd "$nxc_cmd --users"
+            if set -q _flag_edit_cmd; set nxc_cmd (__kronos_edit_cmd "$nxc_cmd"); or return 1; end
+
+            echo "[*] Running NetExec user enumeration ($mode) against $target..."
+            __kronos_exec "$nxc_cmd"
+        end
     end
 end

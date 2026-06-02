@@ -9,7 +9,7 @@ function kronos --description "Active Directory attack orchestrator"
         echo "  _  _______   ____  _   _  ____   _____ "
         echo " | |/ /  __ \ / __ \| \ | |/ __ \ / ____|"
         echo " | ' /| |__) | |  | |  \| | |  | | (___  "
-        echo " |  < |  _  /| |  | | . ` | |  | |\___ \ "
+        echo " |  < |  _  /| |  | | . \` | |  | |\___ \ "
         echo " | . \| | \ \| |__| | |\  | |__| |____) |"
         echo " |_|\_\_|  \_\____/|_| \_|\____/|_____/ "
         set_color normal
@@ -17,6 +17,11 @@ function kronos --description "Active Directory attack orchestrator"
         echo "Kronos is a modular orchestration tool designed to automate and simplify"
         echo "AD penetration testing by wrapping industry-standard tools into a unified CLI."
         echo ""
+
+        if test -n "$__KRONOS_FAKETIME"
+            set_color yellow; echo "  [*] Active Faketime: $__KRONOS_FAKETIME"; set_color normal
+            echo ""
+        end
         
         # Start at top (default to userenum)
         set action (__kronos_ask_choice "Pick a command to execute" "userenum" $commands); or return 1

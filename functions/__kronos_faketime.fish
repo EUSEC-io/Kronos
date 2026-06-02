@@ -2,6 +2,15 @@
 function __kronos_faketime --description "Set/Clear global faketime (e.g. +8h)"
     set -l offset $argv[1]
 
+    if not set -q _flag_quiet; and test -z "$offset"
+        set_color cyan; echo "[*] Starting Faketime wizard..."; set_color normal
+        set -l def "."
+        if test -n "$__KRONOS_FAKETIME"; set def "$__KRONOS_FAKETIME"; end
+        
+        set offset (__kronos_ask "Time Offset (e.g. +8h, -2h, or '.' to clear)" "$def")
+        if test $status -ne 0; return 1; end
+    end
+
     if test -z "$offset" -o "$offset" = "-h" -o "$offset" = "--help"
         echo "Usage: kronos faketime [OFFSET | .]"
         echo ""
