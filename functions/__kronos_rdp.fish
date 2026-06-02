@@ -126,5 +126,5 @@ function __kronos_rdp --description "Connect to target using xfreerdp3 (RDP)"
 
     echo "[*] Connecting to $target via RDP ($rdp_bin)..."
     __kronos_check_dep $rdp_bin; or return 1
-    eval $cmd_str
+    __kronos_exec "$cmd_str"
 end

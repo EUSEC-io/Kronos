@@ -108,7 +108,7 @@ function __kronos_asrep_roast --description "Run AS-REP Roasting using GetNPUser
 
     __kronos_check_dep $impacket_cmd; or return 1
     echo "[*] Running $impacket_cmd against $target for user $user@$domain..."
-    eval $roast_cmd
+    __kronos_exec "$roast_cmd"
 
     # Export ticket if generated
     if test -f "$user.ccache"

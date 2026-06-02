@@ -147,5 +147,5 @@ function __kronos_forcechange --description "Force change a user's password usin
     end
 
     echo "[*] Force-changing password for $target_user via bloodyAD..."
-    eval $cmd_str
+    __kronos_exec "$cmd_str"
 end

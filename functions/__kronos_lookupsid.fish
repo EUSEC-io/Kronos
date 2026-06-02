@@ -142,5 +142,5 @@ function __kronos_lookupsid --description "Enumerate SIDs for AD objects using l
     __kronos_check_dep $impacket_cmd; or return 1
     
     echo "[*] Enumerating SIDs on $target..."
-    eval $full_cmd
+    __kronos_exec "$full_cmd"
 end

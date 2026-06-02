@@ -129,5 +129,5 @@ function __kronos_search --description "Search and enumerate AD objects using bl
     if set -q _flag_edit_cmd; set cmd_str (__kronos_edit_cmd "$cmd_str"); or return 1; end
 
     echo "[*] Searching for '$query' in AD via bloodyAD..."
-    eval $cmd_str
+    __kronos_exec "$cmd_str"
 end

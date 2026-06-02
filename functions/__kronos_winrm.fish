@@ -110,5 +110,5 @@ function __kronos_winrm --description "Connect to target using evil-winrm (WinRM
     if set -q _flag_edit_cmd; set cmd_str (__kronos_edit_cmd "$cmd_str"); or return 1; end
 
     echo "[*] Connecting to $target via WinRM (evil-winrm)..."
-    eval $cmd_str
+    __kronos_exec "$cmd_str"
 end

@@ -162,5 +162,5 @@ function __kronos_secretsdump --description "Dump AD secrets using secretsdump.p
 
     __kronos_check_dep $impacket_cmd; or return 1
     echo "[*] Dumping secrets via $impacket_cmd..."
-    eval $dump_cmd
+    __kronos_exec "$dump_cmd"
 end

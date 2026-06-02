@@ -131,7 +131,7 @@ function __kronos_ingest --description "Ingest Active Directory data using blood
     __kronos_check_dep bloodhound-python; or return 1
 
     echo "[*] Running bloodhound-python against $target ($domain)..."
-    eval $bh_cmd
+    __kronos_exec "$bh_cmd"
     set -l bh_status $status
 
     if test $bh_status -eq 0

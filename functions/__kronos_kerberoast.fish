@@ -168,7 +168,7 @@ function __kronos_kerberoast --description "Run Kerberoasting using GetUserSPNs.
 
     __kronos_check_dep $impacket_cmd; or return 1
     echo "[*] Running $impacket_cmd against $target..."
-    eval $full_cmd
+    __kronos_exec "$full_cmd"
 
     # Export tickets if generated (GetUserSPNs saves them differently, usually per user)
     # But if -request is used, it often saves to a .ccache

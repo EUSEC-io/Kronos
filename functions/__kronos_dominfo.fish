@@ -188,28 +188,28 @@ function __kronos_dominfo --description "Query domain info, users, groups, and s
             echo ""; set_color cyan; echo "[*] Enumerating Shares Now ...."; set_color normal
             set -l cmd "$nxc_base --shares"
             if set -q _flag_edit_cmd; set cmd (__kronos_edit_cmd "$cmd"); or return 1; end
-            eval $cmd
+            __kronos_exec "$cmd"
         end
 
         if test "$list_users" -eq 1
             echo ""; set_color cyan; echo "[*] Enumerating Domain Users Now ...."; set_color normal
             set -l cmd "$nxc_base --users"
             if set -q _flag_edit_cmd; set cmd (__kronos_edit_cmd "$cmd"); or return 1; end
-            eval $cmd
+            __kronos_exec "$cmd"
         end
 
         if test "$pass_pol" -eq 1
             echo ""; set_color cyan; echo "[*] Enumerating Password Policy Now ...."; set_color normal
             set -l cmd "$nxc_base --pass-pol"
             if set -q _flag_edit_cmd; set cmd (__kronos_edit_cmd "$cmd"); or return 1; end
-            eval $cmd
+            __kronos_exec "$cmd"
         end
 
         if test "$list_loggedon" -eq 1
             echo ""; set_color cyan; echo "[*] Enumerating Logged-on Users Now ...."; set_color normal
             set -l cmd "$nxc_base --loggedon-users"
             if set -q _flag_edit_cmd; set cmd (__kronos_edit_cmd "$cmd"); or return 1; end
-            eval $cmd
+            __kronos_exec "$cmd"
         end
 
         if test "$list_groups" -eq 1
@@ -224,7 +224,7 @@ function __kronos_dominfo --description "Query domain info, users, groups, and s
             end
             set -l cmd "$ldap_base --groups"
             if set -q _flag_edit_cmd; set cmd (__kronos_edit_cmd "$cmd"); or return 1; end
-            eval $cmd
+            __kronos_exec "$cmd"
         end
     else
         __kronos_check_dep nxc; or return 1
@@ -236,14 +236,14 @@ function __kronos_dominfo --description "Query domain info, users, groups, and s
             echo ""; set_color cyan; echo "[*] Enumerating Shares Now ...."; set_color normal
             set -l cmd "$nxc_guest --shares"
             if set -q _flag_edit_cmd; set cmd (__kronos_edit_cmd "$cmd"); or return 1; end
-            eval $cmd
+            __kronos_exec "$cmd"
         end
 
         if test "$list_users" -eq 1
             echo ""; set_color cyan; echo "[*] Enumerating Domain Users Now ...."; set_color normal
             set -l cmd "$nxc_guest --users"
             if set -q _flag_edit_cmd; set cmd (__kronos_edit_cmd "$cmd"); or return 1; end
-            eval $cmd
+            __kronos_exec "$cmd"
         end
 
         if test "$list_groups" -eq 1
@@ -251,13 +251,13 @@ function __kronos_dominfo --description "Query domain info, users, groups, and s
             set -l ldap_guest "nxc ldap $target -d \"$domain\" -u 'Guest' -p ''"
             set -l cmd "$ldap_guest --groups"
             if set -q _flag_edit_cmd; set cmd (__kronos_edit_cmd "$cmd"); or return 1; end
-            eval $cmd
+            __kronos_exec "$cmd"
         end
         
         if test "$pass_pol" -eq 1
             echo ""; set_color cyan; echo "[*] Querying Password Policy via rpcclient (NULL)..."; set_color normal
             set -l cmd "rpcclient -U \"\" -N \"$target\" -c \"querydominfo; getdompwinfo\""
-            eval $cmd
+            __kronos_exec "$cmd"
         end
     end
 end

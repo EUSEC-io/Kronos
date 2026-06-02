@@ -94,5 +94,5 @@ function __kronos_spray --description "Password spray using nxc smb"
     __kronos_check_dep nxc; or return 1
 
     echo "[*] Running password spray against $target..."
-    eval $nxc_cmd
+    __kronos_exec "$nxc_cmd"
 end

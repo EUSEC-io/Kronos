@@ -149,5 +149,5 @@ function __kronos_kerbroast --description "Run Kerberoasting using GetUserSPNs.p
 
     __kronos_check_dep $impacket_cmd; or return 1
     echo "[*] Running $impacket_cmd against $target..."
-    eval $full_cmd
+    __kronos_exec "$full_cmd"
 end

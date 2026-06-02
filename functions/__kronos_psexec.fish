@@ -158,5 +158,5 @@ function __kronos_psexec --description "Remote command execution via psexec.py"
 
     __kronos_check_dep $impacket_cmd; or return 1
     echo "[*] Executing PsExec via $impacket_cmd..."
-    eval $full_cmd
+    __kronos_exec "$full_cmd"
 end

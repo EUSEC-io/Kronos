@@ -125,7 +125,7 @@ function __kronos_request --description "Request TGT or ST and export KRB5CCNAME
     if set -q _flag_edit_cmd; set full_cmd (__kronos_edit_cmd "$full_cmd"); or return 1; end
 
     __kronos_check_dep $impacket_cmd; or return 1
-    eval $full_cmd
+    __kronos_exec "$full_cmd"
 
     if test -f "$user.ccache"
         set -gx KRB5CCNAME "$PWD/$user.ccache"

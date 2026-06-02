@@ -139,5 +139,5 @@ function __kronos_add_member --description "Add a user to an AD group using bloo
     __kronos_check_dep bloodyAD; or return 1
 
     echo "[*] Adding $member to group $group via bloodyAD..."
-    command eval $cmd_str
+    command __kronos_exec "$cmd_str"
 end

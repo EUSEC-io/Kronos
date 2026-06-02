@@ -112,5 +112,5 @@ function __kronos_dacl --description "Manipulate AD object DACLs using bloodyAD"
     end
 
     echo "[*] Performing DACL $action ($permission) on $target_obj for $member..."
-    eval $cmd_str
+    __kronos_exec "$cmd_str"
 end

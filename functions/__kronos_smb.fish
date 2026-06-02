@@ -122,5 +122,5 @@ function __kronos_smb --description "Connect to target using smbclient (SMB)"
     if set -q _flag_edit_cmd; set cmd_str (__kronos_edit_cmd "$cmd_str"); or return 1; end
 
     echo "[*] Connecting to //$target/$share via SMB..."
-    eval $cmd_str
+    __kronos_exec "$cmd_str"
 end

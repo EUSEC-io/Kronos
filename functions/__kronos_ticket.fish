@@ -248,7 +248,7 @@ function __kronos_ticket --description "Create advanced AD tickets using tickete
     __kronos_check_dep $bin; or return 1
     
     echo "[*] Executing $subaction ticket attack via $bin..."
-    eval $final_cmd
+    __kronos_exec "$final_cmd"
     
     # Post-execution logic
     set -l forged_user "$user"

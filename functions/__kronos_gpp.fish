@@ -133,13 +133,13 @@ function __kronos_gpp --description "Extract GPP passwords or Autologon registri
         echo ""; set_color cyan; echo "[*] Extracting GPP Passwords (gpp_password module)..."; set_color normal
         set -l cmd "$nxc_base -M gpp_password"
         if set -q _flag_edit_cmd; set cmd (__kronos_edit_cmd "$cmd"); or return 1; end
-        eval $cmd
+        __kronos_exec "$cmd"
     end
 
     if test "$do_autologin" -eq 1
         echo ""; set_color cyan; echo "[*] Extracting GPP Autologon Registries (gpp_autologin module)..."; set_color normal
         set -l cmd "$nxc_base -M gpp_autologin"
         if set -q _flag_edit_cmd; set cmd (__kronos_edit_cmd "$cmd"); or return 1; end
-        eval $cmd
+        __kronos_exec "$cmd"
     end
 end

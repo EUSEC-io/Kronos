@@ -75,5 +75,5 @@ function __kronos_convert --description "Convert tickets between kirbi and ccach
     __kronos_check_dep $impacket_cmd; or return 1
 
     echo "[*] Converting $input to $output..."
-    eval $cmd_str
+    __kronos_exec "$cmd_str"
 end

@@ -158,5 +158,5 @@ function __kronos_add_computer --description "Create a new AD computer account u
     end
 
     echo "[*] Creating computer account $computer via $impacket_cmd..."
-    eval $cmd_str
+    __kronos_exec "$cmd_str"
 end

@@ -143,5 +143,5 @@ function __kronos_rbcd --description "RBCD attack (msDS-AllowedToDelegateTo)"
     if set -q _flag_edit_cmd; set cmd_str (__kronos_edit_cmd "$cmd_str"); or return 1; end
 
     echo "[*] Performing RBCD $action on $target_comp via bloodyAD..."
-    eval $cmd_str
+    __kronos_exec "$cmd_str"
 end

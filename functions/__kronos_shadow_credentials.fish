@@ -138,5 +138,5 @@ function __kronos_shadow_credentials --description "Shadow Credentials attack (K
     if set -q _flag_edit_cmd; set cmd_str (__kronos_edit_cmd "$cmd_str"); or return 1; end
 
     echo "[*] Performing Shadow Credentials $action on $target_obj via bloodyAD..."
-    eval $cmd_str
+    __kronos_exec "$cmd_str"
 end

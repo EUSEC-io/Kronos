@@ -119,5 +119,5 @@ function __kronos_mssql --description "Connect to target using mssqlclient.py (M
 
     __kronos_check_dep $impacket_cmd; or return 1
     echo "[*] Connecting to $target via MSSQL..."
-    eval $cmd_str
+    __kronos_exec "$cmd_str"
 end

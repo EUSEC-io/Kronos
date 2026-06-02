@@ -133,5 +133,5 @@ function __kronos_dnsdump --description "Dump all DNS records from AD using adid
     end
 
     echo "[*] Dumping DNS records via adidnsdump..."
-    eval $full_cmd
+    __kronos_exec "$full_cmd"
 end

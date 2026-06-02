@@ -1,6 +1,6 @@
 # completions/kronos.fish
 
-set -l commands userenum dominfo dnsdump gpp ingest connect asrep-roast kerberoast spray forcechange gmsa ticket convert request lookupsid add-user add-member add-computer dacl search secretsdump psexec rbcd shadow-credentials install reset help
+set -l commands userenum dominfo dnsdump gpp faketime ingest connect search asrep-roast kerberoast lookupsid spray forcechange gmsa add-user add-member add-computer dacl search secretsdump psexec rbcd shadow-credentials ticket convert request install reset help
 set -l protocols rdp winrm ftp smb rpc mssql
 set -l ticket_types golden silver diamond sapphire trust cross-forest bronze
 set -l dominfo_cmds users groups shares policy loggedon
@@ -13,13 +13,14 @@ complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a userenum -d
 complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a dominfo -d "Query domain info and enumerate objects"
 complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a dnsdump -d "Dump all DNS records from AD (adidnsdump)"
 complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a gpp -d "Extract GPP passwords and Autologon registries"
+complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a faketime -d "Set/Clear global faketime offset"
 complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a ingest -d "Ingest AD data using bloodhound-python"
 complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a connect -d "Connect to target via specific protocol"
 complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a asrep-roast -d "AS-REP Roasting (GetNPUsers.py)"
 complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a kerberoast -d "Kerberoasting (GetUserSPNs.py)"
 complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a spray -d "Password spray using valid_users.txt"
 complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a forcechange -d "Force change user password (bloodyAD)"
-complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a gmsa -d "Read GMSA passwords (nxc)"
+complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a gmsa -d "Read GMSA passwords (ldeep)"
 complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a add-user -d "Create a new AD user"
 complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a add-member -d "Add a user to an AD group"
 complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a add-computer -d "Create a new computer account"
@@ -36,6 +37,10 @@ complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a lookupsid -
 complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a install -d "Install all dependencies"
 complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a reset -d "Clear all persistent cache variables"
 complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a help -d "Show help menu"
+
+# Faketime subcommands
+complete -c kronos -n "__fish_seen_subcommand_from faketime" -a clear -d "Clear global faketime"
+complete -c kronos -n "__fish_seen_subcommand_from faketime" -a reset -d "Clear global faketime"
 
 # Dominfo subcommands
 complete -c kronos -n "__fish_seen_subcommand_from dominfo" -a users -d "List domain users"
@@ -69,7 +74,7 @@ complete -c kronos -n "__fish_seen_subcommand_from $all_cmds" -s X -l edit-cmd -
 complete -c kronos -n "__fish_seen_subcommand_from $all_cmds" -s t -l target -r -d "Target IP or Hostname"
 
 # Shared Auth Flags
-set -l needs_auth userenum dominfo dnsdump connect asrep-roast kerberoast forcechange gmsa lookupsid ingest request add-user add-member add-computer dacl search secretsdump psexec rbcd shadow-credentials ticket rdp winrm ftp smb rpc mssql $dominfo_cmds
+set -l needs_auth userenum dominfo dnsdump gpp faketime connect asrep-roast kerberoast forcechange gmsa lookupsid ingest request add-user add-member add-computer dacl search secretsdump psexec rbcd shadow-credentials ticket rdp winrm ftp smb rpc mssql $dominfo_cmds
 complete -c kronos -n "__fish_seen_subcommand_from $needs_auth" -s u -l username -r -d "Username"
 complete -c kronos -n "__fish_seen_subcommand_from $needs_auth" -s p -l password -r -d "Password"
 complete -c kronos -n "__fish_seen_subcommand_from $needs_auth" -s H -l hash -r -d "NTLM Hash"

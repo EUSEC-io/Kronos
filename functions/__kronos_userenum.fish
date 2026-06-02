@@ -153,7 +153,7 @@ function __kronos_userenum --description "Enumerate AD users (Wordlist, NULL Ses
         if set -q _flag_edit_cmd; set cmd_str (__kronos_edit_cmd "$cmd_str"); or return 1; end
 
         echo "[*] Running kerbrute userenum against $target ($domain)..."
-        eval $cmd_str
+        __kronos_exec "$cmd_str"
         
         if test -f .kerbrute_out.txt
             echo "[*] Extracting valid users to valid_users.txt..."
@@ -183,6 +183,6 @@ function __kronos_userenum --description "Enumerate AD users (Wordlist, NULL Ses
         if set -q _flag_edit_cmd; set nxc_cmd (__kronos_edit_cmd "$nxc_cmd"); or return 1; end
 
         echo "[*] Running NetExec user enumeration ($mode) against $target ($domain)..."
-        eval $nxc_cmd
+        __kronos_exec "$nxc_cmd"
     end
 end

@@ -85,5 +85,5 @@ function __kronos_ftp --description "Connect to target using ftp (FTP)"
 
     echo "[*] Connecting to $target via FTP..."
     echo "Note: Use user '$user' and password '$pass'"
-    eval $cmd_str
+    __kronos_exec "$cmd_str"
 end

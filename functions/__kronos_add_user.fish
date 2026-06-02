@@ -135,5 +135,5 @@ function __kronos_add_user --description "Create a new AD user using bloodyAD"
     __kronos_check_dep bloodyAD; or return 1
 
     echo "[*] Creating user $new_user via bloodyAD..."
-    command eval $cmd_str
+    command __kronos_exec "$cmd_str"
 end
