@@ -19,7 +19,7 @@ function __kronos_help --description "Global help for Kronos"
     set_color normal
     echo "This tool requires several external dependencies to function flawlessly:"
     echo "  - NetExec (nxc), Impacket Scripts, bloodyAD, kerbrute, evil-winrm,"
-    echo "    xfreerdp3, bloodhound-python, smbclient, rpcclient, adidnsdump, ldeep, and gum."
+    echo "    xfreerdp3, bloodhound-python, smbclient, rpcclient, adidnsdump, certipy, ldeep, and gum."
     echo ""
     echo "You can install these manually or simply run:"
     set_color green
@@ -33,6 +33,7 @@ function __kronos_help --description "Global help for Kronos"
     echo "COMMANDS:"
     echo "  userenum    Run kerbrute userenum (auto-saves valid_users.txt)"
     echo "  dominfo     Query domain info and enumerate objects"
+  cert        AD CS attack suite (certipy)
     echo "  dnsdump     Dump all DNS records from AD (adidnsdump)"
     echo "  gpp         Extract GPP passwords and Autologon registries"
     echo "  faketime    Set/Clear global faketime offset for all commands"

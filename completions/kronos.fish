@@ -1,6 +1,6 @@
 # completions/kronos.fish
 
-set -l commands userenum dominfo dnsdump gpp faketime ingest connect search asrep-roast kerberoast lookupsid spray forcechange gmsa add-user add-member add-computer dacl search secretsdump psexec rbcd shadow-credentials ticket convert request install reset help
+set -l commands userenum dominfo cert dnsdump gpp faketime ingest connect search asrep-roast kerberoast lookupsid spray forcechange gmsa add-user add-member add-computer dacl search secretsdump psexec rbcd shadow-credentials ticket convert request install reset help
 set -l protocols rdp winrm ftp smb rpc mssql
 set -l ticket_types golden silver diamond sapphire trust cross-forest bronze
 set -l dominfo_cmds users groups shares policy loggedon
@@ -11,6 +11,7 @@ complete -c kronos -f
 # Main commands
 complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a userenum -d "Run kerbrute userenum"
 complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a dominfo -d "Query domain info and enumerate objects"
+complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a cert -d "AD CS attack suite (certipy)"
 complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a dnsdump -d "Dump all DNS records from AD (adidnsdump)"
 complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a gpp -d "Extract GPP passwords and Autologon registries"
 complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a faketime -d "Set/Clear global faketime offset"
@@ -41,6 +42,16 @@ complete -c kronos -n "not __fish_seen_subcommand_from $commands" -a help -d "Sh
 # Faketime subcommands
 complete -c kronos -n "__fish_seen_subcommand_from faketime" -a clear -d "Clear global faketime"
 complete -c kronos -n "__fish_seen_subcommand_from faketime" -a reset -d "Clear global faketime"
+
+# Cert subcommands
+complete -c kronos -n "__fish_seen_subcommand_from cert" -a find -d "Discover vulnerable templates"
+complete -c kronos -n "__fish_seen_subcommand_from cert" -a req -d "Request a certificate"
+complete -c kronos -n "__fish_seen_subcommand_from cert" -a auth -d "Authenticate using PFX"
+complete -c kronos -n "__fish_seen_subcommand_from cert" -a abuse -d "Automated abuse chains"
+
+complete -c kronos -n "__fish_seen_subcommand_from cert" -s c -l ca -r -d "CA Name"
+complete -c kronos -n "__fish_seen_subcommand_from cert" -s T -l template -r -d "Template Name"
+complete -c kronos -n "__fish_seen_subcommand_from cert" -s P -l pfx -r -d "PFX File Path"
 
 # Dominfo subcommands
 complete -c kronos -n "__fish_seen_subcommand_from dominfo" -a users -d "List domain users"
