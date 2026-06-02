@@ -1,8 +1,9 @@
 # completions/kronos.fish
 
-set -l commands userenum dominfo cert dnsdump gpp faketime ingest connect search asrep-roast kerberoast lookupsid spray forcechange gmsa add-user add-member add-computer dacl search secretsdump psexec rbcd shadow-credentials ticket convert request install reset help
+set -l commands userenum dominfo cert dnsdump gpp faketime ingest connect search asrep-roast kerberoast spray forcechange gmsa add-user add-member add-computer dacl search secretsdump psexec rbcd shadow-credentials ticket convert request install reset help
 set -l protocols rdp winrm ftp smb rpc mssql
 set -l ticket_types golden silver diamond sapphire trust cross-forest bronze
+set -l cert_actions find req auth abuse template shadow forge
 set -l dominfo_cmds users groups shares policy loggedon
 
 # Disable file completions unless explicitly allowed
@@ -48,10 +49,14 @@ complete -c kronos -n "__fish_seen_subcommand_from cert" -a find -d "Discover vu
 complete -c kronos -n "__fish_seen_subcommand_from cert" -a req -d "Request a certificate"
 complete -c kronos -n "__fish_seen_subcommand_from cert" -a auth -d "Authenticate using PFX"
 complete -c kronos -n "__fish_seen_subcommand_from cert" -a abuse -d "Automated abuse chains"
+complete -c kronos -n "__fish_seen_subcommand_from cert" -a template -d "Manage certificate templates"
+complete -c kronos -n "__fish_seen_subcommand_from cert" -a shadow -d "Abuse Shadow Credentials"
+complete -c kronos -n "__fish_seen_subcommand_from cert" -a forge -d "Forge certificates"
 
 complete -c kronos -n "__fish_seen_subcommand_from cert" -s c -l ca -r -d "CA Name"
 complete -c kronos -n "__fish_seen_subcommand_from cert" -s T -l template -r -d "Template Name"
 complete -c kronos -n "__fish_seen_subcommand_from cert" -s P -l pfx -r -d "PFX File Path"
+complete -c kronos -n "__fish_seen_subcommand_from cert" -s U -l upn -r -d "UPN to impersonate"
 
 # Dominfo subcommands
 complete -c kronos -n "__fish_seen_subcommand_from dominfo" -a users -d "List domain users"
@@ -78,14 +83,14 @@ complete -c kronos -n "__fish_seen_subcommand_from ticket; and not __fish_seen_s
 complete -c kronos -n "__fish_seen_subcommand_from ticket; and not __fish_seen_subcommand_from $ticket_types" -a bronze -d "Create Bronze Ticket (Bronze Bit / CVE-2020-17049)"
 
 # Universal Flags
-set -l all_cmds $commands $protocols $ticket_types $dominfo_cmds
+set -l all_cmds $commands $protocols $ticket_types $dominfo_cmds $cert_actions
 complete -c kronos -n "__fish_seen_subcommand_from $all_cmds" -s h -l help -d "Show help"
 complete -c kronos -n "__fish_seen_subcommand_from $all_cmds" -s q -l quiet -d "Skip prompts and use cached values"
 complete -c kronos -n "__fish_seen_subcommand_from $all_cmds" -s X -l edit-cmd -d "Inspect and edit command before execution"
 complete -c kronos -n "__fish_seen_subcommand_from $all_cmds" -s t -l target -r -d "Target IP or Hostname"
 
 # Shared Auth Flags
-set -l needs_auth userenum dominfo dnsdump gpp faketime connect asrep-roast kerberoast forcechange gmsa lookupsid ingest request add-user add-member add-computer dacl search secretsdump psexec rbcd shadow-credentials ticket rdp winrm ftp smb rpc mssql $dominfo_cmds
+set -l needs_auth userenum dominfo dnsdump cert gpp faketime connect asrep-roast kerberoast forcechange gmsa lookupsid ingest request add-user add-member add-computer dacl search secretsdump psexec rbcd shadow-credentials ticket rdp winrm ftp smb rpc mssql $dominfo_cmds $cert_actions
 complete -c kronos -n "__fish_seen_subcommand_from $needs_auth" -s u -l username -r -d "Username"
 complete -c kronos -n "__fish_seen_subcommand_from $needs_auth" -s p -l password -r -d "Password"
 complete -c kronos -n "__fish_seen_subcommand_from $needs_auth" -s H -l hash -r -d "NTLM Hash"
@@ -94,6 +99,7 @@ complete -c kronos -n "__fish_seen_subcommand_from $needs_auth" -s k -l kerberos
 # Subcommand-specific flags
 complete -c kronos -n "__fish_seen_subcommand_from userenum" -s w -l wordlist -r -d "Custom wordlist"
 complete -c kronos -n "__fish_seen_subcommand_from userenum" -s N -l null -d "Use NULL session"
+complete -c kronos -n "__fish_seen_subcommand_from userenum" -s E -l export -d "Export users via LDAP"
 complete -c kronos -n "__fish_seen_subcommand_from dnsdump" -s r -l resolve -d "Resolve all records"
 complete -c kronos -n "__fish_seen_subcommand_from gpp" -s m -l gpp-password -d "Scan for GPP passwords"
 complete -c kronos -n "__fish_seen_subcommand_from gpp" -s a -l autologin -d "Scan for Autologon registries"
