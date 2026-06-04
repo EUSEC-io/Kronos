@@ -1,5 +1,10 @@
 # description: Request TGT or ST and export KRB5CCNAME
 function __kronos_request --description "Request TGT or ST and export KRB5CCNAME"
+    set -l wizard 0
+    if test (count $argv) -eq 0
+        set wizard 1
+    end
+
     argparse t/target= h/help u/username= p/password= H/hash= s/spn= d/domain= X/edit-cmd q/quiet w/wizard -- $argv
     or return 1
 
@@ -66,9 +71,15 @@ function __kronos_request --description "Request TGT or ST and export KRB5CCNAME
             set -U __KRONOS_CACHE_REQUEST_USER "$user"
 
             set -l def_auth_val "$pass"
-            if test -n "$hash"; set def_auth_val "$hash"; end
-            if test -z "$def_auth_val"; set def_auth_val "$TGT_PASSWORD"; end
-            set -l auth_input (__kronos_ask "Auth Password or Hash" "$def_auth_val"); or return 1
+            set -l src_auth_val "Cache"
+            if test -n "$hash"; set def_auth_val "$hash"; set src_auth_val "CLI Hash"; end
+            if test -z "$def_auth_val"
+                set def_auth_val "$__KRONOS_CACHE_REQUEST_AUTH_VAL"
+                set src_auth_val "Cache"
+                if test -z "$def_auth_val"; set def_auth_val "$TGT_PASSWORD"; set src_auth_val "TGT_PASSWORD"
+                else if test -z "$def_auth_val"; set def_auth_val "$TGT_CRED_PASSWORD"; set src_auth_val "TGT_CRED_PASSWORD"; end
+            end
+            set -l auth_input (__kronos_ask "Auth Password or Hash" "$def_auth_val" "$src_auth_val"); or return 1
             set -U __KRONOS_CACHE_REQUEST_AUTH_VAL "$auth_input"
             if string match -rq '^[a-fA-F0-9]{32}:[a-fA-F0-9]{32}$|^[a-fA-F0-9]{32}$' -- "$auth_input"
                 set hash "$auth_input"; set pass ""
@@ -90,8 +101,11 @@ function __kronos_request --description "Request TGT or ST and export KRB5CCNAME
         # Fallbacks
         if test -z "$target"; set target "$__KRONOS_CACHE_REQUEST_TARGET"; end
         if test -z "$target"; set target "$TGT"; end
-        if test -z "$domain"; set domain "$__KRONOS_CACHE_REQUEST_DOMAIN"; end
-        if test -z "$domain"; set domain "$TGT_HOSTS[1]"; end
+        if test -z "$domain"
+            set domain "$__KRONOS_CACHE_REQUEST_DOMAIN"
+            if test -z "$domain"; set domain "$TGT_HOSTS[1]"; end
+            if test -z "$domain"; set domain "$TGT_DC_DOMAIN"; end
+        end
         if test -z "$user"; set user "$__KRONOS_CACHE_REQUEST_USER"; end
         if test -z "$user"; set user "$TGT_USERNAME"; end
     end
@@ -125,6 +139,7 @@ function __kronos_request --description "Request TGT or ST and export KRB5CCNAME
     if set -q _flag_edit_cmd; set full_cmd (__kronos_edit_cmd "$full_cmd"); or return 1; end
 
     __kronos_check_dep $impacket_cmd; or return 1
+    echo "[*] Requesting ticket via $impacket_cmd..."
     __kronos_exec "$full_cmd"
 
     if test -f "$user.ccache"

@@ -1,5 +1,10 @@
 # description: Dispatcher for protocol-specific connection subcommands
 function __kronos_connect --description "Dispatcher for protocol-specific connection subcommands"
+    set -l wizard 0
+    if test (count $argv) -eq 0
+        set wizard 1
+    end
+
     set -l protocols rdp winrm smb rpc mssql ftp
     set -l subaction $argv[1]
 
